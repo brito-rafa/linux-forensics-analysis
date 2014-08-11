@@ -14,6 +14,7 @@
 #1.7 - 2014/07/28 - disk CPU heatmap
 #1.8 - 2014/07/28 - disk read and write heatmaps
 #1.9 - 2014/07/29 - coded/tested to support up to 160 CPUs and 800 disks
+#2.0 - 2014/08/11 - coded to support 1000+ dynamic files
 #
 use strict;
 use warnings; 
@@ -47,7 +48,8 @@ my $graphdatdiskcpu; $graphdatdiskcpu = "graph.forensic.disk.cpu.dat";
 my $graphdatdiskread; $graphdatdiskread = "graph.forensic.disk.read.dat";
 my $graphdatdiskwrite; $graphdatdiskwrite = "graph.forensic.disk.write.dat";
 
-my $verticalsize; my $horizontalsize;
+my $verticalsize; my $horizontalsize; my $numofdynfiles;
+my $verticalsizedisk; 
 
 # large array references for the graphs
 my @mytype; my @mycolors; my @mytypecpu; my @mycpulegend;
@@ -201,15 +203,23 @@ sub gettingbasicinfo {
 	}
 	@list_disks = sort keys (%temp_disk); $total_disks = @list_disks;
 #	print Dumper(\@list_disks);
+#
+	# creating the size of the graph depending of the number of disks or samples - some servers have 200+ disks
+	$numofdynfiles = `ls $ARGV[0]/dynamic-* | wc -l`; chomp ($numofdynfiles);
 
-	# creating the size of the graph depending of the number of disks - some servers have 200+ disks
-	if ($total_disks < 160) {
-		$verticalsize=600;		
+	if ($numofdynfiles < 1100) {
 		$horizontalsize=1200;		
-
+		$verticalsize=600;		
 	} else {
-		$verticalsize=1500;		
-		$horizontalsize=3000;		
+		$horizontalsize=$numofdynfiles+100;		
+		$verticalsize=600;		
+	}
+
+	# disk requires a talled graph if there is so many of them
+	if ($total_disks < 160) {
+		$verticalsizedisk=600;		
+	} else {
+		$verticalsizedisk=1500;		
 	}
 
 }
@@ -377,7 +387,7 @@ sub creating_line_graph {
 	my $data = GD::Graph::Data->new();
 	$data->read(file=> $graphdat);
 
-	my $mylinegraph = GD::Graph::mixed->new(1200, 600) or die "Can't create graph!";
+	my $mylinegraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
 
 	$mylinegraph->set(
 	      title             => "Total (bar) and Individual (line) CPU %utilization - server $hostnam $hypert - $dateofdata",
@@ -418,7 +428,7 @@ sub creating_line_graph {
 	# adding the logo
 	my $logo = GD::Image->newFromPng('logo-citihpc.png');
 	my ($w, $h) = $logo->getBounds( );
-	$linegraph->copy($logo, 1110, 5, 0, 0, $w, $h);
+	$linegraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
 
 	my $pnglinefile="citihpc-forensic-heatmap-cpu-$hostnam.png";
 	open(IMG, ">$pnglinefile") or die $!;
@@ -432,7 +442,7 @@ sub creating_mem_graph {
 	my $datamem = GD::Graph::Data->new();
 	$datamem->read(file=> $graphdatmem);
 
-	my $mymemgraph = GD::Graph::mixed->new(1200, 600) or die "Can't create graph!";
+	my $mymemgraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
 
 	$mymemgraph->set(
 	      title             => "Memory Utilization - server $hostnam  - $dateofdata",
@@ -471,7 +481,7 @@ sub creating_mem_graph {
 	# adding the logo
 	my $logo = GD::Image->newFromPng('logo-citihpc.png');
 	my ($w, $h) = $logo->getBounds( );
-	$memgraph->copy($logo, 1110, 5, 0, 0, $w, $h);
+	$memgraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
 
 	my $pngmemfile="citihpc-forensic-heatmap-mem-$hostnam.png";
 	open(IMG, ">$pngmemfile") or die $!;
@@ -486,7 +496,7 @@ sub creating_nic_graph {
 	my $datanic = GD::Graph::Data->new();
 	$datanic->read(file=> $graphdatnic);
 
-	my $mynicgraph = GD::Graph::lines->new(1200, 600) or die "Can't create graph!";
+	my $mynicgraph = GD::Graph::lines->new($horizontalsize, $verticalsize) or die "Can't create graph!";
 
 	my @listofcolors = splice @mycolors, 0 , $total_nics*2;
 	$mynicgraph->set(
@@ -532,7 +542,7 @@ sub creating_nic_graph {
 	# adding the logo
 	my $logo = GD::Image->newFromPng('logo-citihpc.png');
 	my ($w, $h) = $logo->getBounds( );
-	$nicgraph->copy($logo, 1110, 5, 0, 0, $w, $h);
+	$nicgraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
 
 	my $pngnicfile="citihpc-forensic-heatmap-nic-$hostnam.png";
 	open(IMG, ">$pngnicfile") or die $!;
@@ -547,7 +557,7 @@ sub creating_diskawait_graph {
 	#$datamem->read(file=> $graphdatmem);
 	$datadiska->read(file=> $graphdatdiskawait);
 
-	my $mydiskagraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+	my $mydiskagraph = GD::Graph::mixed->new($horizontalsize, $verticalsizedisk) or die "Can't create graph!";
 
 	$mydiskagraph->set(
 	      title             => "Disk await in ms - server $hostnam  - $dateofdata",
@@ -607,7 +617,7 @@ sub creating_diskcpu_graph {
 	my $datadiskc = GD::Graph::Data->new();
 	$datadiskc->read(file=> $graphdatdiskcpu);
 
-	my $mydiskcgraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+	my $mydiskcgraph = GD::Graph::mixed->new($horizontalsize, $verticalsizedisk) or die "Can't create graph!";
 
 	$mydiskcgraph->set(
 	      title             => "%CPU used for IO - server $hostnam  - $dateofdata",
@@ -667,7 +677,7 @@ sub creating_diskread_graph {
 	my $datadiskr = GD::Graph::Data->new();
 	$datadiskr->read(file=> $graphdatdiskread);
 
-	my $mydiskrgraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+	my $mydiskrgraph = GD::Graph::mixed->new($horizontalsize, $verticalsizedisk) or die "Can't create graph!";
 
 	$mydiskrgraph->set(
 	      title             => "Disk Reads in Mb/sec - server $hostnam  - $dateofdata",
