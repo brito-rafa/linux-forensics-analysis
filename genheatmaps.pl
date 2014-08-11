@@ -122,7 +122,7 @@ sub main {
 	&parsing_log();
 	&creating_line_graph ();
 	&creating_mem_graph ();
-#	&creating_nic_graph ();
+	&creating_nic_graph ();
 	&creating_diskawait_graph ();
 	&creating_diskcpu_graph ();
 	&creating_diskread_graph ();
@@ -488,7 +488,7 @@ sub creating_nic_graph {
 	my @listofcolors = splice @mycolors, 0 , $total_nics*2;
 	$mynicgraph->set(
 	      title             => "NIC utilization in Kbps - server $hostnam $nicextralegend  - $dateofdata",
-		dclrs		=> @listofcolors,
+		dclrs		=> [@listofcolors],
 		transparent	=> 0,
 		# top margin
 		t_margin	=> 50,
