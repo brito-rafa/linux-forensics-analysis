@@ -100,6 +100,7 @@ then
 	exit 5
 fi
 
+function check_dynamic {
 
 if [ $VERBOSE -eq 1 ]
 then 
@@ -1059,8 +1060,16 @@ for ((i=0; i< ${#term_collector[@]};i++));do
  echo " ${term_collector[i]}"
 done
 echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
+}
+
+
 # Heatmaps Generation
-echo -e "${green} Info: Creating heatmap files... ${NC}" 
-./genheatmaps.pl ${MYDATADIR}
+function call_heatmap {
+	echo -e "${green} Info: Creating heatmap files... ${NC}" 
+	./genheatmaps.pl ${MYDATADIR}
+}
+
+check_dynamic
+#call_heatmap
 echo -e "${green} Info: End of dynamic data analysis ${NC}"
 
