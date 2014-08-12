@@ -618,218 +618,223 @@ fi
 
 for ((i=0; i< ${#arr2[@]};i++));do
 
-#Checking for RX errors
-rx_err1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '4,4p'| awk '{print $3}'| sed -e 's/errors://g'`
-rx_err2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '4,4p'| awk '{print $3}'| sed -e 's/errors://g'`
-#if [ $rx_err1 -eq $rx_err2 ]
-#then
-#	echo "Debugging... No Difference in RX Error detected for interface ${arr2[i]}"
-if [ $rx_err1 -lt $rx_err2 ]
-then
-	rx_errordiff=`expr $rx_err2 - $rx_err1`
-else
-	rx_errordiff=`expr $rx_err1 - $rx_err2`
-#echo -e "${red} Warning: Difference in RX Error for interface ${arr2[i]}:$rx_errordiff ${NC}"
-fi
+	echo "counter $i  interface ${arr2[$i]}"
+	#Checking for RX errors
+#	set -x
+	rx_err1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $3}'| sed -e 's/errors://g'`
+	rx_err2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $3}'| sed -e 's/errors://g'`
+#	set +x
 
-if [ $rx_errordiff -gt 0 ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then
-			echo -e "${red} Warning: Error Frame difference of $rx_errordiff bytes detected for RX interface ${arr2[i]} ${NC}"
-	else 
-			term_collector+=('Frame Error on RX Interface indicating ethernet card congestion and network degradation')
-	fi
-#else
-#	echo " No difference in RX error has been observed"
-fi
-
-#Checking for TX errors
-tx_err1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $3}'| sed -e 's/errors://g'`
-tx_err2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $3}'| sed -e 's/errors://g'`
-#if [ $tx_err1 -eq $tx_err2 ]
-#then
-#        echo "Debugging... No Difference in TX Error detected for interface ${arr2[i]}"
-if [ $tx_err1 -lt $tx_err2 ]
-then
-        tx_errordiff=`expr $tx_err2 - $tx_err1`
-else
-        tx_errordiff=`expr $tx_err1 - $tx_err2`
-#echo -e "${red} Warning: Difference in TX Error for interface:$tx_errordiff ${NC}"
-fi
-
-if [ $tx_errordiff -gt 0 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then
-		        echo -e "${red} Warning: Error Frame difference of $tx_errordiff bytes detected for TX interface ${arr2[i]} ${NC}"
-	else
-			term_collector+=('Frame Error on TX Interface indicating ethernet card congestion and network degradation')
-	fi
-#else
- #       echo " No difference in TX error has been observed"
-fi
-
-
-
-#Checking for RX drop
-rx_drop1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '4,4p'| awk '{print $4}'| sed -e 's/dropped://g'`
-rx_drop2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '4,4p'| awk '{print $4}'| sed -e 's/dropped://g'`
-#if [ $rx_drop1 -eq $rx_drop2 ]
-#then
-#	echo "Debugging... No Difference in RX Drop detected for interface ${arr2[i]}"
-if [ $rx_drop1 -lt $rx_drop2 ]
+	echo "$rx_err1 and $rx_err2"
+	#if [ $rx_err1 -eq $rx_err2 ]
+	#then
+	#	echo "Debugging... No Difference in RX Error detected for interface ${arr2[i]}"
+	if [ $rx_err1 -lt $rx_err2 ]
 	then
-		rx_dropdiff=`expr $rx_drop2 - $rx_drop1`
-else
-		rx_dropdiff=`expr $rx_drop1 - $rx_drop2`
-#echo -e "${red} Warning: Difference in RX Drop Detected for interface ${arr2[i]}:$rx_dropdiff ${NC}"
-fi
-
-if [ $rx_dropdiff -gt 0 ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
-			echo -e "${red} Warning: Drop difference of $rx_dropdiff bytes detected for RX interface ${arr2[i]} ${NC}"
+		rx_errordiff=`expr $rx_err2 - $rx_err1`
 	else
-			term_collector+=('Drop Difference for RX Interface indicating ethernet card congestion and network degradation')
+		rx_errordiff=`expr $rx_err1 - $rx_err2`
+	#echo -e "${red} Warning: Difference in RX Error for interface ${arr2[i]}:$rx_errordiff ${NC}"
 	fi
-#else
-#	echo "No Difference in RX Drop"
-fi
 
-#Checking for TX drop
-tx_drop1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $4}'| sed -e 's/dropped://g'`
-tx_drop2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $4}'| sed -e 's/dropped://g'`
-#if [ $tx_drop1 -eq $tx_drop2 ]
-#then
-#        echo "Debugging... No Difference in TX Drop detected for interface ${arr2[i]}"
-if [ $tx_drop1 -lt $tx_drop2 ]
-        then
-                tx_dropdiff=`expr $tx_drop2 - $tx_drop1`
-else
-                tx_dropdiff=`expr $tx_drop1 - $tx_drop2`
-#echo -e "${red} Warning: Difference in TX Drop Detected for interface ${arr2[i]}:$tx_dropdiff ${NC}"
-fi
+	if [ $rx_errordiff -gt 0 ]
+	then 
+		if [ $VERBOSE -eq 1 ]
+			then
+				echo -e "${red} Warning: Error Frame difference of $rx_errordiff bytes detected for RX interface ${arr2[i]} ${NC}"
+		else 
+				term_collector+=('Frame Error on RX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else
+	#	echo " No difference in RX error has been observed"
+	fi
 
-
-if [ $tx_dropdiff -gt 0 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
-		        echo -e "${red} Warning: Drop difference of $tx_dropdiff bytes detected for TX interface ${arr2[i]} ${NC}"
+	#Checking for TX errors
+	tx_err1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '6,6p'| awk '{print $3}'| sed -e 's/errors://g'`
+	tx_err2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '6,6p'| awk '{print $3}'| sed -e 's/errors://g'`
+	#if [ $tx_err1 -eq $tx_err2 ]
+	#then
+	#        echo "Debugging... No Difference in TX Error detected for interface ${arr2[i]}"
+	if [ $tx_err1 -lt $tx_err2 ]
+	then
+		tx_errordiff=`expr $tx_err2 - $tx_err1`
 	else
-			term_collector+=('Drop Difference for TX Interface indicating ethernet card congestion and network degradation')
+		tx_errordiff=`expr $tx_err1 - $tx_err2`
+	#echo -e "${red} Warning: Difference in TX Error for interface:$tx_errordiff ${NC}"
 	fi
-#else
- #       echo "No Difference in TX Drop"
-fi
 
-
-#Checking for RX Overrun
-rx_run1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '4,4p'| awk '{print $5}'| sed -e 's/overruns://g'`
-rx_run2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '4,4p'| awk '{print $5}'| sed -e 's/overruns://g'`
-#if [ $rx_run1 -eq $rx_run2 ]
-#then
-#	echo "Debugging... No Difference in RX Overrun detected for interface ${arr2[i]}"
-if [ $rx_run1 -lt $rx_run2 ]
-then
-	rx_rundiff=`expr $rx_run2 - $rx_run1`
-else
-	rx_rundiff=`expr $rx_run1 - $rx_run2`
-#echo -e "${red} Warning: Difference in RX Overrun Detected for interface ${arr2[i]}:$rx_rundiff ${NC}"
-fi
-
-if [ $rx_rundiff -gt 0 ] 
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
-			echo -e "${red} Warning: Overrun difference of $rx_rundiff bytes detected for RX interface ${arr2[i]} ${NC}"
-	else
-			term_collector+=('Overrun Detected for RX Interface indicating ethernet card congestion and network degradation')
+	if [ $tx_errordiff -gt 0 ]
+	then
+		if [ $VERBOSE -eq 1 ]
+			then
+				echo -e "${red} Warning: Error Frame difference of $tx_errordiff bytes detected for TX interface ${arr2[i]} ${NC}"
+		else
+				term_collector+=('Frame Error on TX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else
+	 #       echo " No difference in TX error has been observed"
 	fi
-#else
-#	echo "No diff in RX Overrun"
-fi
 
 
-#Checking for TX overrun
-tx_run1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $5}'| sed -e 's/overruns://g'`
-tx_run2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $5}'| sed -e 's/overruns://g'`
-#if [ $tx_run1 -eq $tx_run2 ]
-#then
-#        echo "Debugging... No Difference in TX Overrun detected for interface ${arr2[i]}"
-if [ $tx_run1 -lt $tx_run2 ]
-then
-        tx_rundiff=`expr $tx_run2 - $tx_run1`
-else
-        tx_rundiff=`expr $tx_run1 - $tx_run2`
-#echo -e "${red} Warning: Difference in TX Overrun Detected for interface ${arr2[i]}:$tx_rundiff ${NC}"
-fi
 
-if [ $tx_rundiff -gt 0 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
-		        echo -e "${red} Warning: Overrun  difference of $tx_rundiff bytes detected for TX interface ${arr2[i]} ${NC}"
-	else
-			term_collector+=('Overrun Detected for TX Interface indicating ethernet card congestion and network degradation')
-	fi
-#else
- #       echo "No diff in TX Overrun"
-fi
-
-#Checking for RX Frame
-rx_frame1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '4,4p'| awk '{print $6}'| sed -e 's/frame://g'`
-rx_frame2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '4,4p'| awk '{print $6}'| sed -e 's/frame://g'`
-#if [ $rx_frame1 -eq $rx_frame2 ]
-#then
-#	echo "Debugging... No Difference in RX Frame detected for interface ${arr2[i]}"
-if [ $rx_frame1 -lt $rx_frame2 ]
-then
-	rx_framediff=`expr $rx_frame2 - $rx_frame1`
-else
-	rx_framediff=`expr $rx_frame1 - $rx_frame2`
-#echo -e "${red} Warning: Difference in RX Frame Detected for interface ${arr2[i]}:$rx_framediff ${NC}"
-fi
-
-if [ $rx_framediff -gt 0 ] 
-then 
-	if [ $VERBOSE -eq 1 ]
+	#Checking for RX drop
+	rx_drop1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $4}'| sed -e 's/dropped://g'`
+	rx_drop2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $4}'| sed -e 's/dropped://g'`
+	#if [ $rx_drop1 -eq $rx_drop2 ]
+	#then
+	#	echo "Debugging... No Difference in RX Drop detected for interface ${arr2[i]}"
+	if [ $rx_drop1 -lt $rx_drop2 ]
 		then
-			echo -e "${red} Warning: Frame difference of $rx_framediff bytes detected for the RX interface ${arr2[i]} ${NC}"
+			rx_dropdiff=`expr $rx_drop2 - $rx_drop1`
 	else
-			term_collector+=('Frame Difference Detected for RX Interface indicating ethernet card congestion and network degradation')
+			rx_dropdiff=`expr $rx_drop1 - $rx_drop2`
+	#echo -e "${red} Warning: Difference in RX Drop Detected for interface ${arr2[i]}:$rx_dropdiff ${NC}"
 	fi
-#else 
-#	echo " No diff in RX Frame oberved"
-fi
 
-#Checking for TX Carrier
-tx_carrier1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $6}'| sed -e 's/carrier://g'`
-tx_carrier2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $6}'| sed -e 's/carrier://g'`
-#if [ $tx_carrier1 -eq $tx_carrier2 ]
-#then
+	if [ $rx_dropdiff -gt 0 ]
+	then 
+		if [ $VERBOSE -eq 1 ]
+			then 
+				echo -e "${red} Warning: Drop difference of $rx_dropdiff bytes detected for RX interface ${arr2[i]} ${NC}"
+		else
+				term_collector+=('Drop Difference for RX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else
+	#	echo "No Difference in RX Drop"
+	fi
+
+	#Checking for TX drop
+	tx_drop1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '6,6p'| awk '{print $4}'| sed -e 's/dropped://g'`
+	tx_drop2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '6,6p'| awk '{print $4}'| sed -e 's/dropped://g'`
+	#if [ $tx_drop1 -eq $tx_drop2 ]
+	#then
+	#        echo "Debugging... No Difference in TX Drop detected for interface ${arr2[i]}"
+	if [ $tx_drop1 -lt $tx_drop2 ]
+		then
+			tx_dropdiff=`expr $tx_drop2 - $tx_drop1`
+	else
+			tx_dropdiff=`expr $tx_drop1 - $tx_drop2`
+	#echo -e "${red} Warning: Difference in TX Drop Detected for interface ${arr2[i]}:$tx_dropdiff ${NC}"
+	fi
+
+
+	if [ $tx_dropdiff -gt 0 ]
+	then
+		if [ $VERBOSE -eq 1 ]
+			then 
+				echo -e "${red} Warning: Drop difference of $tx_dropdiff bytes detected for TX interface ${arr2[i]} ${NC}"
+		else
+				term_collector+=('Drop Difference for TX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else
+	 #       echo "No Difference in TX Drop"
+	fi
+
+
+	#Checking for RX Overrun
+	rx_run1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $5}'| sed -e 's/overruns://g'`
+	rx_run2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $5}'| sed -e 's/overruns://g'`
+	#if [ $rx_run1 -eq $rx_run2 ]
+	#then
+	#	echo "Debugging... No Difference in RX Overrun detected for interface ${arr2[i]}"
+	if [ $rx_run1 -lt $rx_run2 ]
+	then
+		rx_rundiff=`expr $rx_run2 - $rx_run1`
+	else
+		rx_rundiff=`expr $rx_run1 - $rx_run2`
+	#echo -e "${red} Warning: Difference in RX Overrun Detected for interface ${arr2[i]}:$rx_rundiff ${NC}"
+	fi
+
+	if [ $rx_rundiff -gt 0 ] 
+	then 
+		if [ $VERBOSE -eq 1 ]
+			then 
+				echo -e "${red} Warning: Overrun difference of $rx_rundiff bytes detected for RX interface ${arr2[i]} ${NC}"
+		else
+				term_collector+=('Overrun Detected for RX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else
+	#	echo "No diff in RX Overrun"
+	fi
+
+
+	#Checking for TX overrun
+	tx_run1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '6,6p'| awk '{print $5}'| sed -e 's/overruns://g'`
+	tx_run2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '6,6p'| awk '{print $5}'| sed -e 's/overruns://g'`
+	#if [ $tx_run1 -eq $tx_run2 ]
+	#then
+	#        echo "Debugging... No Difference in TX Overrun detected for interface ${arr2[i]}"
+	if [ $tx_run1 -lt $tx_run2 ]
+	then
+		tx_rundiff=`expr $tx_run2 - $tx_run1`
+	else
+		tx_rundiff=`expr $tx_run1 - $tx_run2`
+	#echo -e "${red} Warning: Difference in TX Overrun Detected for interface ${arr2[i]}:$tx_rundiff ${NC}"
+	fi
+
+	if [ $tx_rundiff -gt 0 ]
+	then
+		if [ $VERBOSE -eq 1 ]
+			then 
+				echo -e "${red} Warning: Overrun  difference of $tx_rundiff bytes detected for TX interface ${arr2[i]} ${NC}"
+		else
+				term_collector+=('Overrun Detected for TX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else
+	 #       echo "No diff in TX Overrun"
+	fi
+
+	#Checking for RX Frame
+	rx_frame1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $6}'| sed -e 's/frame://g'`
+	rx_frame2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $6}'| sed -e 's/frame://g'`
+	#if [ $rx_frame1 -eq $rx_frame2 ]
+	#then
+	#	echo "Debugging... No Difference in RX Frame detected for interface ${arr2[i]}"
+	if [ $rx_frame1 -lt $rx_frame2 ]
+	then
+		rx_framediff=`expr $rx_frame2 - $rx_frame1`
+	else
+		rx_framediff=`expr $rx_frame1 - $rx_frame2`
+	#echo -e "${red} Warning: Difference in RX Frame Detected for interface ${arr2[i]}:$rx_framediff ${NC}"
+	fi
+
+	if [ $rx_framediff -gt 0 ] 
+	then 
+		if [ $VERBOSE -eq 1 ]
+			then
+				echo -e "${red} Warning: Frame difference of $rx_framediff bytes detected for the RX interface ${arr2[i]} ${NC}"
+		else
+				term_collector+=('Frame Difference Detected for RX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else 
+	#	echo " No diff in RX Frame oberved"
+	fi
+
+	#Checking for TX Carrier
+	tx_carrier1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '6,6p'| awk '{print $6}'| sed -e 's/carrier://g'`
+	tx_carrier2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '6,6p'| awk '{print $6}'| sed -e 's/carrier://g'`
+	#if [ $tx_carrier1 -eq $tx_carrier2 ]
+	#then
 #        echo "Debugging... No Difference in TX Carrier detected for interface ${arr2[i]}"
-if [ $tx_carrier1 -lt $tx_carrier2 ]
-then
-        tx_carrierdiff=`expr $tx_carrier2 - $tx_carrier1`
-else
-        tx_carrierdiff=`expr $tx_carrier1 - $tx_carrier2`
-#echo -e "${red} Warning: Difference in TX Carrier Detected for interface ${arr2[i]}:$tx_carrierdiff ${NC}"
-fi
-
-if [ $tx_carrierdiff -gt 0 ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
-			echo -e "${red} Warning: Carrier difference of $tx_carrierdiff bytes detected for interface ${arr2[i]} ${NC}"
+	if [ $tx_carrier1 -lt $tx_carrier2 ]
+	then
+		tx_carrierdiff=`expr $tx_carrier2 - $tx_carrier1`
 	else
-			term_collector+=('Carrier Difference detected for TX Interface indicating ethernet card congestion and network degradation')
+		tx_carrierdiff=`expr $tx_carrier1 - $tx_carrier2`
+	#echo -e "${red} Warning: Difference in TX Carrier Detected for interface ${arr2[i]}:$tx_carrierdiff ${NC}"
 	fi
-#else
-#	echo " No difference in TX Carrier found"
-fi
+
+	if [ $tx_carrierdiff -gt 0 ]
+		then 
+		if [ $VERBOSE -eq 1 ]
+			then 
+				echo -e "${red} Warning: Carrier difference of $tx_carrierdiff bytes detected for interface ${arr2[i]} ${NC}"
+		else
+				term_collector+=('Carrier Difference detected for TX Interface indicating ethernet card congestion and network degradation')
+		fi
+	#else
+	#	echo " No difference in TX Carrier found"
+	fi
 done
 
 # Checking for Server Swapping 
