@@ -616,7 +616,6 @@ for ((i=0; i< ${#arr2[@]};i++));do
 	rx_err2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | sed -n '5,5p'| awk '{print $3}'| sed -e 's/errors://g'`
 #	set +x
 
-	echo "$rx_err1 and $rx_err2"
 	#if [ $rx_err1 -eq $rx_err2 ]
 	#then
 	#	echo "Debugging... No Difference in RX Error detected for interface ${arr2[i]}"
