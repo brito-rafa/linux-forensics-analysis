@@ -603,14 +603,6 @@ then
 fi
 
 
-#if [ $VERBOSE -eq 1 ]
-#then 
-#	echo -e "${blue} Debugging... Printing all active interfaces ${NC}"
-#		for ((i=0; i< ${#arr2[@]};i++));do
-#			echo ${arr2[i]}
-#		done
-#fi
-
 if [ $VERBOSE -eq 1 ]
 then
 	echo -e "${blue} Debugging... Checking for Error Frame Drop for TX and RX interfaces ${NC}"
