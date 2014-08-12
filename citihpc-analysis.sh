@@ -610,7 +610,6 @@ fi
 
 for ((i=0; i< ${#arr2[@]};i++));do
 
-	echo "counter $i  interface ${arr2[$i]}"
 	#Checking for RX errors
 #	set -x
 	rx_err1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | sed -n '5,5p'| awk '{print $3}'| sed -e 's/errors://g'`
