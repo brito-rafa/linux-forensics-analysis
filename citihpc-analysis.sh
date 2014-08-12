@@ -162,7 +162,7 @@ then
 	echo -e "${blue} Debugging... Checking for uniform memory size ${NC}"
 fi
 
-uniformmem=`grep -A17 "Memory Device" $STATIC | grep -e Size | sort | uniq -d | wc -l`
+uniformmem=`grep -A17 "Memory Device" $STATIC | grep -e Size |grep -v "No"| sort | uniq -d | wc -l`
 
 if [ $uniformmem -gt 1 ]
 then 
