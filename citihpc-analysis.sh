@@ -1,6 +1,28 @@
 #!/bin/bash
 #CitiHPC Forensic Analysis
 #Written by Kushal Mall
+#Version 1.16
+#History
+#Created 5/12/2014
+#1.0 - Check for  Logical Volume, Hyper-threading, Dmidecode, Memory Device
+#1.1 - LSPCI, SYSCTL Kernel Parameters, tcp_rmem, Ring Buffers
+#1.2 - Temp files removed,ASU
+#1.3 - Dynamic Data Analysis --
+#                             netstat -s : TCP Packet Retransmitted,UDP Packet Received Errors,TCP Data Loss Event, TCP Timeout Event
+#                             ifconfig : Error,Drop,Overrun,Frame                              
+#1.4 - Detect Broadcom Interface with IP, ethtool -k
+#1.5 - Check and headers added
+#1.6 - Verbose mode option added
+#1.7 - Process identification
+#1.8 - ASU base updated
+#1.9 - RX and TX check added for Active Interfaces
+#1.10 - Debug paramter added,Known Process Log Updated
+#1.11 - Displayeing system information from Forensic Output, VERBOSE edited
+#1.12 - Server Swap, Colour coding
+#1.13 - CPU Starvation 
+#1.14 - Verbose option added
+#1.15 - Check all dynamic files are compressed
+#1.16 - Invoking the heatmaps
 
 TODAY=`date +%y%m%d`
 NOW=`date +%y%m%d-%H%M%S`
@@ -232,15 +254,6 @@ for ((i=0;i<${#arr_hp[@]};i++)); do
 done
 fi
 
-#if [ $VERBOSE -eq 1 ]
-#then
-#	echo -e "${blue} Debugging... Checking for Kernel Parameters ${NC}"
-#fi
-#if grep -q -e "net.ipv4.tcp_wmem = 4096" -e "net.ipv4.tcp_rmem = 4096" $STATIC
-#then
-#	echo -e "${red} Warning: TCP wmem and rmem = 4096 -- Not Recommended ${NC}"
-#fi
-
 if [ $VERBOSE -eq 1 ]
 then 
 	echo -e "${blue} Debugging... Checking for sysctl Parameters ${NC}"
@@ -253,8 +266,12 @@ sys_actual_para=()
 sys_actual_val=()
 sys_var1=0
 sys_var2=0
+#sys_parameter=`cat kernellog.txt | awk  '{print $1}'`
+#sys_value=`cat kernellog.txt | awk  '{print $3}'`
+
 sys_parameter=`cat kernellog.txt | awk  '{print $1}'`
 sys_value=`cat kernellog.txt | awk  '{print $3}'`
+
 
 for i in $sys_parameter; do
 	sys_ref_para[sys_var1]=`echo $i`
@@ -284,11 +301,8 @@ done
 
 for ((i=0; i<${#sys_actual_para[@]};i++))
 do
-        if [ "${sys_actual_val[i]}" != "${sys_ref_val[i]}" ]
-                then
-#                        echo "Parameter match for ${sys_ref_para[i]}"
- #       else
-			if [ $VERBOSE -eq 1 ]
+        if [ "${sys_actual_val[i]}" != "${sys_ref_val[i]}" ]; then 
+  			if [ $VERBOSE -eq 1 ]
 				then 
 		                        echo -e "${red} Warning: Parameter mismatch for: ${sys_actual_para[i]}. Value detected: ${sys_actual_val[i]}. Actual Value Expected: ${sys_ref_val[i]} ${NC}"
 			else 
@@ -376,14 +390,6 @@ for ((i=0; i< ${#genseg[@]};i++)); do
                 fi
 done
 
-
-#if grep -q "Vendor: IBM Corp." $STATIC; then 
-#echo -e "${green} Info: Vendor is IBM ..Performing ASU Analysis ${NC}"
-#while read i; do if ! (egrep -q "$i" $STATIC); then echo -e "${red} Warning: $i -- Parameter Mismatch ${NC}"; fi; done <ibm-asu-llp-base.txt
-#else 
-#echo "ASU Analysis not done"
-#fi
-
 # ASU Analysis
 if grep -q "Vendor: IBM Corp." $STATIC; then
 echo -e "${green} Info: Performing ASU Analysis Check ${NC}"
@@ -439,17 +445,10 @@ done
 fi
 
 # Conrep Analysis
-
-#if [ -f ${MYDATADIR}/conrepxml* ]; then
-#conrep_count=`ls ${MYDATADIR}/conrepxml* | wc -l`
-
-#echo $conrep_count
 conrep=`ls  ${MYDATADIR}/conrepxml* 2>/dev/null | head -1`
-
 if [ "$conrep" !=  "" ] && [ -f $conrep ]; then
 	echo -e "${green} Info: Conrep config file detected. Proceeding with conrep analysis.. ${NC}"
 	conrep=`ls ${MYDATADIR}/conrepxml* | head -1`
-
 	ref_parameter=()
 	ref_value=()
 	actual_value=()
@@ -517,108 +516,70 @@ else
 	fi
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for UDP Packet Received Errors ${NC}"
 fi
-	udp1=`zgrep -A3 -e "Udp" $FIRSTDYNAMIC | head | sed -n '4,4p' | awk '{print $1}'`
-#echo -e "${blue} Debugging... Initial Received Error Count:$udp1 ${NC}"
-	udp2=`zgrep -A3 -e "Udp" $LASTDYNAMIC | head | sed -n '4,4p' | awk '{print $1}'`
-#echo -e "${blue} Debugging... Final Received Error Count:$udp2 ${NC}"
-
-
-if [ $udp1 -lt $udp2 ]
-then 
+udp1=`zgrep -A3 -e "Udp" $FIRSTDYNAMIC | head | sed -n '4,4p' | awk '{print $1}'`
+udp2=`zgrep -A3 -e "Udp" $LASTDYNAMIC | head | sed -n '4,4p' | awk '{print $1}'`
+if [ $udp1 -lt $udp2 ]; then 
 	udpdiff=`expr $udp2 - $udp1`
 else
 	udpdiff=`expr $udp1 - $udp2`
-#	echo -e "${red} Warning: UDP Received Error Difference:$udpdiff ${NC}"
 fi
-
-if [ $udpdiff -gt 0 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
-			echo -e "${red} Warning: UDP Packet Received Error detected with a packet difference of $udpdiff ${NC}"
+if [ $udpdiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
+		echo -e "${red} Warning: UDP Packet Received Error detected with a packet difference of $udpdiff ${NC}"
 	else 
-			term_collector+=('UDP Packet Received Errors detected which may indicate network degradation.')
+		term_collector+=('UDP Packet Received Errors detected which may indicate network degradation.')
 	fi
-#else
-#	echo "No diff in UDP Error observed"
 fi
 
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for TCP Data Loss Event ${NC}"
 fi
 	tcpd1=`zgrep -A11 -e "TcpExt" $FIRSTDYNAMIC | sed -n '12,12p' | awk '{print $1}'`
-#echo -e "${blue} Debugging... Initial Data Loss Count:$tcpd1 ${NC}"
 	tcpd2=`zgrep -A11 -e "TcpExt" $LASTDYNAMIC | sed -n '12,12p' | awk '{print $1}'`
-#echo -e "${blue} Debugging... Final Data Loss Count:$tcpd2 ${NC}"
-
-
-if [ $tcpd1 -lt $tcpd2 ]
-then 
+if [ $tcpd1 -lt $tcpd2 ]; then 
 	datadiff=`expr $tcpd2 - $tcpd1`
 else 
 	datadiff=`expr $tcpd1 - $tcpd2`
-#echo -e "${red} Warning: Data Loss Difference observed:$datadiff ${NC}"
 fi
-
-if [ $datadiff -gt 0 ] 
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
-			echo -e "${red} Warning: TCP Data Loss detected with a difference of $datadiff bytes ${NC}"
+if [ $datadiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
+		echo -e "${red} Warning: TCP Data Loss detected with a difference of $datadiff bytes ${NC}"
 	else 
 		term_collector+=('TCP Data Loss detected which may indicate network degradation.')
-#else 
-#	echo " No difference in Data Loss Observed"
 	fi
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
         echo -e "${blue} Debugging... Checking for TCP Time-Out ${NC}"
 fi
 	timed1=`zgrep -A12 -e "TcpExt" $FIRSTDYNAMIC | sed -n '13,13p' | awk '{print $1}'`
-#echo -e "${blue} Debugging... Initial TCP Time-Out Count:$timed1 ${NC}"
 	timed2=`zgrep -A12 -e "TcpExt" $LASTDYNAMIC | sed -n '13,13p' | awk '{print $1}'`
-#echo -e "${blue} Debugging... Final TCP Time-Out Count:$timed2 ${NC}"
-
-
-if [ $timed1 -lt $timed2 ]
-then
+if [ $timed1 -lt $timed2 ]; then 
 	timediff=`expr $timed2 - $timed1`
 else
 	timediff=`expr $timed1 - $timed2`
-#echo -e "${red} Warning: TCP Time-Out Detected:$timediff ${NC}"
 fi
-
-if [ $timediff -gt 0 ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
-			echo -e "${red} Warning: TCP Time-Out detected with a difference of $timediff ${NC}"
+if [ $timediff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
+		echo -e "${red} Warning: TCP Time-Out detected with a difference of $timediff ${NC}"
 	else 
-			term_collector+=('TCP Time-Out has been detected which may indicate network degradation.')
+		term_collector+=('TCP Time-Out has been detected which may indicate network degradation.')
 	fi
-#else
-#	echo "No TCP Timeout Observed"
 fi
 
 
-if [ $VERBOSE -eq 1 ]
-then 
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Printing all active interfaces ${NC}"
 		for ((i=0; i< ${#arr2[@]};i++));do
 			echo ${arr2[i]}
 		done
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for Error Frame Drop for TX and RX interfaces ${NC}"
 fi	
 
@@ -627,170 +588,107 @@ for ((i=0; i< ${#arr2[@]};i++));do
 #Checking for RX errors
 rx_err1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | zgrep "RX packets" | awk '{print $3}'| sed -e 's/errors://g'`
 rx_err2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | zgrep "RX packets" | awk '{print $3}'| sed -e 's/errors://g'`
-#if [ $rx_err1 -eq $rx_err2 ]
-#then
-#	echo "Debugging... No Difference in RX Error detected for interface ${arr2[i]}"
-if [ $rx_err1 -lt $rx_err2 ]
-then
+if [ $rx_err1 -lt $rx_err2 ]; then 
 	rx_errordiff=`expr $rx_err2 - $rx_err1`
 else
 	rx_errordiff=`expr $rx_err1 - $rx_err2`
-#echo -e "${red} Warning: Difference in RX Error for interface ${arr2[i]}:$rx_errordiff ${NC}"
 fi
 
-if [ $rx_errordiff -gt 0 ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then
-			echo -e "${red} Warning: Error Frame difference of $rx_errordiff bytes detected for RX interface ${arr2[i]} ${NC}"
+if [ $rx_errordiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
+		echo -e "${red} Warning: Error Frame difference of $rx_errordiff bytes detected for RX interface ${arr2[i]} ${NC}"
 	else 
-			term_collector+=('Frame Error on RX Interface indicating ethernet card congestion and network degradation')
+		term_collector+=('Frame Error on RX Interface indicating ethernet card congestion and network degradation')
 	fi
-#else
-#	echo " No difference in RX error has been observed"
 fi
 
 #Checking for TX errors
 tx_err1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | zgrep "TX packets" | awk '{print $3}'| sed -e 's/errors://g'`
 tx_err2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | zgrep "TX packets" | awk '{print $3}'| sed -e 's/errors://g'`
-#if [ $tx_err1 -eq $tx_err2 ]
-#then
-#        echo "Debugging... No Difference in TX Error detected for interface ${arr2[i]}"
-if [ $tx_err1 -lt $tx_err2 ]
-then
+if [ $tx_err1 -lt $tx_err2 ]; then 
         tx_errordiff=`expr $tx_err2 - $tx_err1`
 else
         tx_errordiff=`expr $tx_err1 - $tx_err2`
-#echo -e "${red} Warning: Difference in TX Error for interface:$tx_errordiff ${NC}"
 fi
-
-if [ $tx_errordiff -gt 0 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then
+if [ $tx_errordiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 		        echo -e "${red} Warning: Error Frame difference of $tx_errordiff bytes detected for TX interface ${arr2[i]} ${NC}"
 	else
 			term_collector+=('Frame Error on TX Interface indicating ethernet card congestion and network degradation')
 	fi
-#else
- #       echo " No difference in TX error has been observed"
 fi
-
-
 
 #Checking for RX drop
 rx_drop1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | zgrep "RX packets" | awk '{print $4}'| sed -e 's/dropped://g'`
 rx_drop2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | zgrep "RX packets" | awk '{print $4}'| sed -e 's/dropped://g'`
-#if [ $rx_drop1 -eq $rx_drop2 ]
-#then
-#	echo "Debugging... No Difference in RX Drop detected for interface ${arr2[i]}"
-if [ $rx_drop1 -lt $rx_drop2 ]
-	then
+if [ $rx_drop1 -lt $rx_drop2 ]; then 
 		rx_dropdiff=`expr $rx_drop2 - $rx_drop1`
 else
 		rx_dropdiff=`expr $rx_drop1 - $rx_drop2`
-#echo -e "${red} Warning: Difference in RX Drop Detected for interface ${arr2[i]}:$rx_dropdiff ${NC}"
 fi
 
-if [ $rx_dropdiff -gt 0 ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ $rx_dropdiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Drop difference of $rx_dropdiff bytes detected for RX interface ${arr2[i]} ${NC}"
 	else
 			term_collector+=('Drop Difference for RX Interface indicating ethernet card congestion and network degradation')
 	fi
-#else
-#	echo "No Difference in RX Drop"
 fi
 
 #Checking for TX drop
 tx_drop1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | zgrep "TX packets" | awk '{print $4}'| sed -e 's/dropped://g'`
 tx_drop2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | zgrep "TX packets"| awk '{print $4}'| sed -e 's/dropped://g'`
-#if [ $tx_drop1 -eq $tx_drop2 ]
-#then
-#        echo "Debugging... No Difference in TX Drop detected for interface ${arr2[i]}"
-if [ $tx_drop1 -lt $tx_drop2 ]
-        then
+if [ $tx_drop1 -lt $tx_drop2 ]; then 
                 tx_dropdiff=`expr $tx_drop2 - $tx_drop1`
 else
                 tx_dropdiff=`expr $tx_drop1 - $tx_drop2`
-#echo -e "${red} Warning: Difference in TX Drop Detected for interface ${arr2[i]}:$tx_dropdiff ${NC}"
 fi
-
-
-if [ $tx_dropdiff -gt 0 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ $tx_dropdiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 		        echo -e "${red} Warning: Drop difference of $tx_dropdiff bytes detected for TX interface ${arr2[i]} ${NC}"
 	else
 			term_collector+=('Drop Difference for TX Interface indicating ethernet card congestion and network degradation')
 	fi
-#else
- #       echo "No Difference in TX Drop"
 fi
 
 
 #Checking for RX Overrun
 rx_run1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | zgrep "RX packets" | awk '{print $5}'| sed -e 's/overruns://g'`
 rx_run2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | zgrep "RX packets" | awk '{print $5}'| sed -e 's/overruns://g'`
-#if [ $rx_run1 -eq $rx_run2 ]
-#then
-#	echo "Debugging... No Difference in RX Overrun detected for interface ${arr2[i]}"
-if [ $rx_run1 -lt $rx_run2 ]
-then
+if [ $rx_run1 -lt $rx_run2 ]; then 
 	rx_rundiff=`expr $rx_run2 - $rx_run1`
 else
 	rx_rundiff=`expr $rx_run1 - $rx_run2`
-#echo -e "${red} Warning: Difference in RX Overrun Detected for interface ${arr2[i]}:$rx_rundiff ${NC}"
 fi
 
-if [ $rx_rundiff -gt 0 ] 
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ $rx_rundiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Overrun difference of $rx_rundiff bytes detected for RX interface ${arr2[i]} ${NC}"
 	else
 			term_collector+=('Overrun Detected for RX Interface indicating ethernet card congestion and network degradation')
 	fi
-#else
-#	echo "No diff in RX Overrun"
 fi
-
 
 #Checking for TX overrun
 tx_run1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | zgrep "TX packets" | awk '{print $5}'| sed -e 's/overruns://g'`
 tx_run2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | zgrep "TX packets" | awk '{print $5}'| sed -e 's/overruns://g'`
-#if [ $tx_run1 -eq $tx_run2 ]
-#then
-#        echo "Debugging... No Difference in TX Overrun detected for interface ${arr2[i]}"
-if [ $tx_run1 -lt $tx_run2 ]
-then
-        tx_rundiff=`expr $tx_run2 - $tx_run1`
-else
-        tx_rundiff=`expr $tx_run1 - $tx_run2`
-#echo -e "${red} Warning: Difference in TX Overrun Detected for interface ${arr2[i]}:$tx_rundiff ${NC}"
+if [ $tx_run1 -lt $tx_run2 ]; then 
+        	tx_rundiff=`expr $tx_run2 - $tx_run1`
+	else
+        	tx_rundiff=`expr $tx_run1 - $tx_run2`
 fi
-
-if [ $tx_rundiff -gt 0 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ $tx_rundiff -gt 0 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 		        echo -e "${red} Warning: Overrun  difference of $tx_rundiff bytes detected for TX interface ${arr2[i]} ${NC}"
 	else
 			term_collector+=('Overrun Detected for TX Interface indicating ethernet card congestion and network degradation')
 	fi
-#else
- #       echo "No diff in TX Overrun"
 fi
 
 #Checking for RX Frame
 rx_frame1=`zgrep -A6 "^${arr2[i]}      Link encap" $FIRSTDYNAMIC | zgrep "RX packets" | awk '{print $6}'| sed -e 's/frame://g'`
 rx_frame2=`zgrep -A6 "^${arr2[i]}      Link encap" $LASTDYNAMIC | zgrep "RX packets" | awk '{print $6}'| sed -e 's/frame://g'`
-#if [ $rx_frame1 -eq $rx_frame2 ]
-#then
-#	echo "Debugging... No Difference in RX Frame detected for interface ${arr2[i]}"
+
 if [ $rx_frame1 -lt $rx_frame2 ]; then 
 	rx_framediff=`expr $rx_frame2 - $rx_frame1`
 else
@@ -858,22 +756,19 @@ for i in $star_ibm; do
 	cpu_ibm[count_ibm]=`echo $i`
 	let count_ibm=count_ibm+1
 done
-
 for((i=0; i<${#cpu_ibm[@]};i++)) do
-	if [ "${cpu_ibm[i]}" = "%idle" ]
-		then
+	if [ "${cpu_ibm[i]}" = "%idle" ]; then 
         		cpu_ibm[$i]=10
-		fi
+	fi
 done
-
 for ((i=0; i< ${#cpu_ibm[@]};i++)) do
-  if [[ "${cpu_ibm[i]}" < "1" ]];then
-	if [ $VERBOSE -eq 1 ]; then 
+	if [[ "${cpu_ibm[i]}" < "1" ]];then
+		if [ $VERBOSE -eq 1 ]; then 
 	       echo -e "${red} Warning: CPU Starvation Detected:${cpu_ibm[i]}.Please check CPU Heat Map. ${NC}"
 	else
 		term_collector+=('High CPU Utilization detected.')
+		fi
 	fi
-  fi
 done
 fi
 
@@ -945,9 +840,9 @@ for i in $nd; do
 	let bottle=bottle+1
 done
 for ((i=0; i<${#bottle_neck[@]} ;i++)) do
-if [[ "${bottle_neck[i]}" > "3000" ]]; then 
-        let content=content+1
-fi
+	if [[ "${bottle_neck[i]}" > "3000" ]]; then 
+        	let content=content+1
+	fi
 done
 	if [ $VERBOSE -eq 1 ]; then 
 		echo -e "${red} Warning: $content instances of Context Switching has been detected ${NC}"
@@ -973,7 +868,6 @@ for i in $sar_dev; do
         dev_chk[pp]=`echo $i`
         let pp=pp+1
 done
-
 stamp=0
 sar_stamp=()
 for i in $sar_tim; do
@@ -1019,7 +913,7 @@ fi
 
 echo -e "${red} Warning: Following Sub Optimal Configurations have been detected in the system:"
 for ((i=0; i< ${#term_collector[@]};i++));do
- echo " ${term_collector[i]}"
+	echo " ${term_collector[i]}"
 done
 echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
 
