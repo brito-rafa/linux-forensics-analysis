@@ -254,67 +254,47 @@ for ((i=0;i<${#arr_hp[@]};i++)); do
 done
 fi
 
-if [ $VERBOSE -eq 1 ]
-then 
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for sysctl Parameters ${NC}"
 fi
-#while read i; do if !(egrep -q "$i" $STATIC); then  echo -e "${red} Warning: $i -- Parameter Mismatch ${NC}"; fi; done <kernellog.txt
-
 sys_ref_para=()
 sys_ref_val=()
 sys_actual_para=()
 sys_actual_val=()
 sys_var1=0
 sys_var2=0
-#sys_parameter=`cat kernellog.txt | awk  '{print $1}'`
-#sys_value=`cat kernellog.txt | awk  '{print $3}'`
-
 sys_parameter=`cat kernellog.txt | awk  '{print $1}'`
 sys_value=`cat kernellog.txt | awk  '{print $3}'`
-
-
 for i in $sys_parameter; do
 	sys_ref_para[sys_var1]=`echo $i`
 	let sys_var1=sys_var1+1
 done
-
 for i in $sys_value; do
 	sys_ref_val[sys_var2]=`echo $i`
 	let sys_var2=sys_var2+1
 done
-
-for((i=0; i<${#sys_ref_para[@]};i++))
-do
-if grep -q -w -e ${sys_ref_para[i]} $STATIC; then 
-
-	sys_actual_para[i]=`grep -w -e ${sys_ref_para[i]} $STATIC | awk '{print $1}'`
-else 
-	echo -e "${red} Kernel Parameters Not Present. Please Check the files produced from the Forensic Script!! ${NC}"
-break
-fi
+for((i=0; i<${#sys_ref_para[@]};i++)); do
+	if grep -q -w -e ${sys_ref_para[i]} $STATIC; then 
+		sys_actual_para[i]=`grep -w -e ${sys_ref_para[i]} $STATIC | awk '{print $1}'`
+	else 
+		echo -e "${red} Kernel Parameters Not Present. Please Check the files produced from the Forensic Script!! ${NC}"
+	break
+	fi
 done
-
-for((i=0; i<${#sys_ref_para[@]};i++))
-do
+for((i=0; i<${#sys_ref_para[@]};i++)); do
 	sys_actual_val[i]=`grep -w -e ${sys_ref_para[i]} $STATIC | awk '{print $3}'`
 done
-
-for ((i=0; i<${#sys_actual_para[@]};i++))
-do
+for ((i=0; i<${#sys_actual_para[@]};i++)); do
         if [ "${sys_actual_val[i]}" != "${sys_ref_val[i]}" ]; then 
-  			if [ $VERBOSE -eq 1 ]
-				then 
-		                        echo -e "${red} Warning: Parameter mismatch for: ${sys_actual_para[i]}. Value detected: ${sys_actual_val[i]}. Actual Value Expected: ${sys_ref_val[i]} ${NC}"
+  			if [ $VERBOSE -eq 1 ]; then 
+				echo -e "${red} Warning: Parameter mismatch for: ${sys_actual_para[i]}. Value detected: ${sys_actual_val[i]}. Actual Value Expected: ${sys_ref_val[i]} ${NC}"
 			else 
-					term_collector+=('Kernel Parameters are not finely tuned for low latency.')
+				term_collector+=('Kernel Parameters are not finely tuned for low latency.')
 			fi
         fi
 done
 
-
-
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for Ring Parameters ${NC}"
 fi
 arr=(`grep ^Ring $STATIC | awk '{print $4}'| sed "s/://g" | grep -v ethconf | grep -v ethtool | uniq`)
@@ -335,113 +315,86 @@ if [ "${arr[$COUNTER]}" != "" ]; then
 
 				fi
 		fi
-
 		max_TX=`grep -A10 "Ring parameters for ${arr[$COUNTER]}" $STATIC | grep TX: | head -1 | awk '{print $2}'`
 		current_TX=`grep -A10 "Ring parameters for ${arr[$COUNTER]}" $STATIC | grep TX: | tail -1 | awk '{print $2}'`
-		if [ $max_TX -ne "$current_TX" ]
-			then
-#				echo -e "${green} Info: Current Settings for TX :$current_TX ${NC}"
-				if [ $VERBOSE -eq 1 ]
-					then 
-						echo -e "${red} Warning: Check TX Ring Buffer settings for interface ${arr[$COUNTER]}. Current Settings: $current_TX. Maximum Settings:$max_TX ${NC}"
+		if [ $max_TX -ne "$current_TX" ]; then 
+			if [ $VERBOSE -eq 1 ]; then 
+				echo -e "${red} Warning: Check TX Ring Buffer settings for interface ${arr[$COUNTER]}. Current Settings: $current_TX. Maximum Settings:$max_TX ${NC}"
 				else 
-						term_collector+=('The receive ring buffer is not set to the maximum. This can lead to packet drops.')
-				fi
+				term_collector+=('The receive ring buffer is not set to the maximum. This can lead to packet drops.')
+			fi
 		fi              
              	let COUNTER=COUNTER+1
     	done
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking whether TCP Segmentation Offload is Off ${NC}"
 fi
 tcpseg=(`grep tcp-segmentation-offload $STATIC | awk '{print $2}'`)
 for ((i=0; i< ${#tcpseg[@]};i++)); do
-                if [ "${tcpseg[i]}" != "on" ]
-	                then
-			#	echo -e "${blue} Debugging... TCP Segmentation is On ${NC}"
-#		else
-			if [ $VERBOSE -eq 1 ]
-				then 
-					echo -e "${red} Warning: TCP Segmentation Offload is Off ${NC}"		
-			else
-					term_collector+=('TCP Segmentation Offload is disabled which can lead to higher CPU utilization.')
-			fi
-fi
+	if [ "${tcpseg[i]}" != "on" ]; then
+		if [ $VERBOSE -eq 1 ]; then 
+			echo -e "${red} Warning: TCP Segmentation Offload is Off ${NC}"		
+		else
+			term_collector+=('TCP Segmentation Offload is disabled which can lead to higher CPU utilization.')
+		fi
+	fi
 done
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking whether Generic Segmentation is Off ${NC}"
 fi
 genseg=(`grep generic-segmentation-offload: $STATIC | awk '{print $2}'`)
 for ((i=0; i< ${#genseg[@]};i++)); do
-                if [ "${genseg[i]}" != "on" ]
-                        then
-                               # echo -e "${blue} Debugging... Generic Segmentation is On ${NC}"
-#		else
-			if [ $VERBOSE -eq 1 ]
-				then 
-					echo -e "${red} Warning: Generic Segmentation is Off ${NC}"
-			else 
-					term_collector+=('Generic Segmentation Offload is disabled which can lead to higher CPU utilization.')					
-			fi
-                fi
+	if [ "${genseg[i]}" != "on" ]; then
+		if [ $VERBOSE -eq 1 ]; then
+			echo -e "${red} Warning: Generic Segmentation is Off ${NC}"
+		else 
+			term_collector+=('Generic Segmentation Offload is disabled which can lead to higher CPU utilization.')	
+		fi
+	fi
 done
 
 # ASU Analysis
 if grep -q "Vendor: IBM Corp." $STATIC; then
-echo -e "${green} Info: Performing ASU Analysis Check ${NC}"
-asu_ref_para=()
-asu_ref_val=()
-asu_actual_para=()
-asu_var1=0
-asu_var2=0
-asu_actual_val=()
-asu_parameter=`cat ibm-asu-llp-base.txt | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $1}'`
-asu_value=`cat ibm-asu-llp-base.txt | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $3}'`
-
-for i in $asu_parameter; do
-	asu_ref_para[asu_var1]=`echo $i`
-	let asu_var1=asu_var1+1
-done
-
-for i in $asu_value; do
-	asu_ref_val[asu_var2]=`echo $i`
-	let asu_var2=asu_var2+1
-done
-
-for((i=0; i<${#asu_ref_para[@]};i++))
-do
-if grep -q -w -e ${asu_ref_para[i]} $STATIC; then 
-	asu_actual_para[i]=`grep -w -e ${asu_ref_para[i]} $STATIC | awk '{print $1}' | sed 's/=/ = /g' | awk '{print $1}'`
-else
-	echo -e "${red} Warning: ASU Parameters not present. Please check the static files produced from the Forensic Script !!"
-break
-fi 
-done
-
-
-for((i=0; i<${#asu_ref_para[@]};i++))
-do
-	asu_actual_val[i]=`grep -w -e ${asu_ref_para[i]} $STATIC | awk '{print $1}' | sed 's/=/ = /g' | awk '{print $3}'`
-done
-
-for ((i=0; i<${#asu_actual_para[@]};i++))
-do
-        if [ "${asu_actual_val[i]}" != "${asu_ref_val[i]}" ]
-                then
-         #               echo "Parameter match for ${asu_ref_para[i]}"
-       # else
-		if [ $VERBOSE -eq 1 ]
-			then 
-	                        echo -e "${red} Warning: Parameter mismatch for: ${asu_actual_para[i]}. Value detected: ${asu_actual_val[i]}. Actual Value Expected: ${asu_ref_val[i]} ${NC}"
-		else
-				term_collector+=('BIOS settings are not optimized for low latency.')
-		fi
-        fi
-done
+	echo -e "${green} Info: Performing ASU Analysis Check ${NC}"
+	asu_ref_para=()
+	asu_ref_val=()
+	asu_actual_para=()
+	asu_var1=0
+	asu_var2=0
+	asu_actual_val=()
+	asu_parameter=`cat ibm-asu-llp-base.txt | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $1}'`
+	asu_value=`cat ibm-asu-llp-base.txt | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $3}'`
+		for i in $asu_parameter; do
+			asu_ref_para[asu_var1]=`echo $i`
+			let asu_var1=asu_var1+1
+		done
+		for i in $asu_value; do
+			asu_ref_val[asu_var2]=`echo $i`
+			let asu_var2=asu_var2+1
+		done
+		for((i=0; i<${#asu_ref_para[@]};i++)); do 
+			if grep -q -w -e ${asu_ref_para[i]} $STATIC; then 
+				asu_actual_para[i]=`grep -w -e ${asu_ref_para[i]} $STATIC | awk '{print $1}' | sed 's/=/ = /g' | awk '{print $1}'`
+			else
+				echo -e "${red} Warning: ASU Parameters not present. Please check the static files produced from the Forensic Script !!"
+			break
+			fi 
+		done
+		for((i=0; i<${#asu_ref_para[@]};i++)); do
+			asu_actual_val[i]=`grep -w -e ${asu_ref_para[i]} $STATIC | awk '{print $1}' | sed 's/=/ = /g' | awk '{print $3}'`
+		done
+		for ((i=0; i<${#asu_actual_para[@]};i++)); do 
+		        if [ "${asu_actual_val[i]}" != "${asu_ref_val[i]}" ]; then 
+				if [ $VERBOSE -eq 1 ]; then 
+	                        	echo -e "${red} Warning: Parameter mismatch for: ${asu_actual_para[i]}. Value detected: ${asu_actual_val[i]}. Actual Value Expected: ${asu_ref_val[i]} ${NC}"
+			else
+					term_collector+=('BIOS settings are not optimized for low latency.')
+				fi
+		        fi
+		done
 fi
 
 # Conrep Analysis
@@ -466,16 +419,11 @@ if [ "$conrep" !=  "" ] && [ -f $conrep ]; then
 		ref_value[var2]=`echo $i`
 		let var2=var2+1
 	done
-	for((i=0; i<${#ref_parameter[@]};i++))
-	do
+	for((i=0; i<${#ref_parameter[@]};i++)); do 
 		actual_value[i]=`grep -w -e ${ref_parameter[i]} $conrep | awk -F\"\> '{print $2}' | awk -F\<\/ '{print $1}'`
 	done
-
-	for ((i=0; i<${#ref_value[@]};i++))
-	do
+	for ((i=0; i<${#ref_value[@]};i++)); do 
 		if [ "${ref_value[i]}" != "${actual_value[i]}" ]; then
-	#                        echo "Parameter match for ${ref_parameter[i]}"
-	#        else
 			if [ $VERBOSE -eq 1 ]; then
 				echo -e "${red} Warning: Parameter mismatch for ${ref_parameter[i]}. Value Detected: ${actual_value[i]}. Actual Value Expected: ${ref_value[i]} ${NC}"
 			else
@@ -807,43 +755,42 @@ if [ $VERBOSE -eq 1 ]; then
 fi
 content=0
 if grep -q "Vendor: IBM Corp." $STATIC; then
-echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
-bottle=0
-nd=()
-bottle_neck=()
-nd=`zgrep -A1 "cswch/s" $ALLDYNAMIC | awk '{print $4}' | sed -e 's/cswch\/s/ /g'`
-
-for i in $nd; do
-	bottle_neck[bottle]=`echo $i`
-	let bottle=bottle+1
-done
-for ((i=0; i<${#bottle_neck[@]} ;i++)) do
-	if [[ "${bottle_neck[i]}" > "3000" ]]; then 
-		if [ $VERBOSE -eq 1 ]; then 
+	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
+	bottle=0
+	nd=()
+	bottle_neck=()
+	nd=`zgrep -A1 "cswch/s" $ALLDYNAMIC | awk '{print $4}' | sed -e 's/cswch\/s/ /g'`
+	for i in $nd; do
+		bottle_neck[bottle]=`echo $i`
+		let bottle=bottle+1
+	done
+	for ((i=0; i<${#bottle_neck[@]} ;i++)) do
+		if [[ "${bottle_neck[i]}" > "3000" ]]; then 
+			if [ $VERBOSE -eq 1 ]; then 
 				echo -e "${red} Warning: $content instances of Context Switching has been detected ${NC}"
-		else
+			else
 				term_collector+=('Context Switching')
+			fi
 		fi
-	fi
-done
+	done
 fi
 
 content=0
 if grep -q "Vendor: HP" $STATIC; then
 	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
-bottle=0
-nd=()
-bottle_neck=()
-nd=`zgrep -A1 "cswch/s" $ALLDYNAMIC | awk '{print $3}' | sed -e 's/cswch\/s/ /g'`
-for i in $nd; do
-	bottle_neck[bottle]=`echo $i`
-	let bottle=bottle+1
-done
-for ((i=0; i<${#bottle_neck[@]} ;i++)) do
-	if [[ "${bottle_neck[i]}" > "3000" ]]; then 
-        	let content=content+1
-	fi
-done
+	bottle=0
+	nd=()
+	bottle_neck=()
+	nd=`zgrep -A1 "cswch/s" $ALLDYNAMIC | awk '{print $3}' | sed -e 's/cswch\/s/ /g'`
+	for i in $nd; do
+		bottle_neck[bottle]=`echo $i`
+		let bottle=bottle+1
+	done
+	for ((i=0; i<${#bottle_neck[@]} ;i++)) do
+		if [[ "${bottle_neck[i]}" > "3000" ]]; then 
+	        	let content=content+1
+		fi
+	done
 	if [ $VERBOSE -eq 1 ]; then 
 		echo -e "${red} Warning: $content instances of Context Switching has been detected ${NC}"
 	else
@@ -854,63 +801,59 @@ fi
 #sar Parameter Check -- Disk Bottleneck Check
 
 function disk_utilization_check {
-line_cnt=0
-line_cnt=`zcat $FIRSTDYNAMIC | grep "Average:" | sed -n '/DEV/,/IFACE/ p' | wc -l`
-let ll=line_cnt-2
-sr="-A"$ll
-sar_dev=`zcat $ALLDYNAMIC | grep  "Average:" | grep $sr "DEV" | awk '{print $2}'| sed -e 's/DEV//g'`
-sar_await=`zcat $ALLDYNAMIC | grep  "Average:" | grep $sr "DEV" | awk '{print $8}' | sed -e 's/await//g'`
-sar_util=`zcat $ALLDYNAMIC | grep  "Average:" | grep $sr "DEV" | awk '{print $10}' | sed -e 's/%util//g'`
-sar_tim=`zcat $ALLDYNAMIC | grep $sr "DEV" | grep -P '\d\d:\d\d:\d\d\s' | awk '{print $1}'`
-pp=0
-dev_chk=()
-for i in $sar_dev; do
-        dev_chk[pp]=`echo $i`
-        let pp=pp+1
-done
-stamp=0
-sar_stamp=()
-for i in $sar_tim; do
-        sar_stamp[stamp]=`echo $i`
-        let stamp=stamp+1
-done
+	line_cnt=0
+	line_cnt=`zcat $FIRSTDYNAMIC | grep "Average:" | sed -n '/DEV/,/IFACE/ p' | wc -l`
+	let ll=line_cnt-2
+	sr="-A"$ll
+	sar_dev=`zcat $ALLDYNAMIC | grep  "Average:" | grep $sr "DEV" | awk '{print $2}'| sed -e 's/DEV//g'`
+	sar_await=`zcat $ALLDYNAMIC | grep  "Average:" | grep $sr "DEV" | awk '{print $8}' | sed -e 's/await//g'`
+	sar_util=`zcat $ALLDYNAMIC | grep  "Average:" | grep $sr "DEV" | awk '{print $10}' | sed -e 's/%util//g'`
+	sar_tim=`zcat $ALLDYNAMIC | grep $sr "DEV" | grep -P '\d\d:\d\d:\d\d\s' | awk '{print $1}'`
+	pp=0
+	dev_chk=()
+		for i in $sar_dev; do
+		        dev_chk[pp]=`echo $i`
+	        	let pp=pp+1
+		done
+	stamp=0
+	sar_stamp=()
+		for i in $sar_tim; do
+	        	sar_stamp[stamp]=`echo $i`
+	        	let stamp=stamp+1
+		done
 
-disk_anomaly=0
-tim=0
-await_chk=()
-for i in $sar_await; do
-        await_chk[tim]=`echo $i`
-        let tim=tim+1
-done
+	disk_anomaly=0
+	tim=0
+	await_chk=()
+		for i in $sar_await; do
+	        	await_chk[tim]=`echo $i`
+	        	let tim=tim+1
+		done
+		for ((i=0;i<${#await_chk[@]};i++)) do
+        		if [[ "${await_chk[i]}" > "2.00" ]]; then
+				let disk_anomaly=disk_anomaly+1
+		        fi
+		done
+	ut=0
+	util_chk=()
+		for i in $sar_util; do
+		        util_chk[ut]=`echo $i`
+		        let ut=ut+1
+		done
+		for ((i=0;i<${#util_chk[@]};i++)) do
+		        if [[ "${util_chk[i]}" > "20.00" ]]; then
+				let disk_anomaly=disk_anomaly+1
+		        fi
+		done
 
-for ((i=0;i<${#await_chk[@]};i++)) do
-        if [[ "${await_chk[i]}" > "2.00" ]]; then
-		let disk_anomaly=disk_anomaly+1
-        fi
-done
-
-
-ut=0
-util_chk=()
-for i in $sar_util; do
-        util_chk[ut]=`echo $i`
-        let ut=ut+1
-done
-for ((i=0;i<${#util_chk[@]};i++)) do
-        if [[ "${util_chk[i]}" > "20.00" ]]; then
-		let disk_anomaly=disk_anomaly+1
-        fi
-done
-
-if [ $VERBOSE -eq 1 ];then 
-        	 echo -e "${red} Warning: Anomaly Detected for Disk:$disk_anomaly ${NC}"
-         else
-                 term_collector+=('High disk utilization detected')
-fi
+	if [ $VERBOSE -eq 1 ];then 
+        		 echo -e "${red} Warning: Anomaly Detected for Disk:$disk_anomaly ${NC}"
+	         else
+        	         term_collector+=('High disk utilization detected')
+	fi
 }
 
 #disk_utilization_check
-
 echo -e "${red} Warning: Following Sub Optimal Configurations have been detected in the system:"
 for ((i=0; i< ${#term_collector[@]};i++));do
 	echo " ${term_collector[i]}"
