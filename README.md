@@ -1,12 +1,35 @@
 citihpc-forensics-analysis
 ==========================
+citihpc-forensics-analysis is part of the CitiHPC Forensics framework and methodology.
+It parses data generated from citihpc-forensics-collector creating heatmaps and a report about issues and point of improvments.
+
+
+
+requirements
+============
+
+The following perl modules must be installed on any box that have access to the VSH logs :
+- perl-GD
+- perl-GD-Graph
+
+One can install those modules in Citi network following these steps to enable the non-certified repos:
+https://collaborate.citi.net/groups/sfs-reporting-30/blog/2014/03/13/not-certified-yum-repository-on-citi-cloud-servers
+
+And running
+yum --enablerepo=NOT-CERTIFIED install perl-GD perl-GD-Graph
 
 runtime
 =======
 
+citihpc-analysis.sh is the main script but one can generate the heatmaps separately running 
+
+./genheatmaps.pl <collector_directory>
+
+As of this run, the file logo-citihpc.png must be present on the same directory.
+
 revision history
 ================
-
+```
 genheatmaps.pl
 1.1 - added memory
 1.2 - support for RHEL5
@@ -18,7 +41,9 @@ genheatmaps.pl
 1.8 - 2014/07/28 - disk read and write heatmaps
 1.9 - 2014/07/29 - coded/tested to support up to 160 CPUs and 800 disks
 2.0 - 2014/08/11 - coded to support 1000+ dynamic files
+```
 
+```
 citihpc-analysis.sh
 Created 5/12/2014
 1.0 - Check for  Logical Volume, Hyper-threading, Dmidecode, Memory Device
@@ -40,4 +65,4 @@ Created 5/12/2014
 1.14 - Verbose option added
 1.15 - Check all dynamic files are compressed
 1.16 - Invoking the heatmaps
-
+```
