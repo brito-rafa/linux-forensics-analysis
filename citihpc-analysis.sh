@@ -128,7 +128,20 @@ then
 	echo -e "${green} Info: Found $FIRSTDYNAMIC as first dynamic file ${NC}"
 	echo -e "${green} Info: Found $LASTDYNAMIC as last dynamic file ${NC}"
 fi
+
+
 echo -e "${green} Info: Starting Static Data Analysis ${NC}"
+
+# Finding RHEL Release
+rhel=0
+rhel_release=`grep -P '^Red\sHat.*6\.\d?' $STATIC | head -1`
+if [[ "$rhel_release" =~ [/Santiago/] ]]; then
+        let rhel="6"
+else
+        let rhel="5"
+fi
+echo " RHEL Version: $rhel"
+
 if [ $VERBOSE -eq 1 ]
 then
 	echo -e "${blue} Debugging... Checking for presence of Logical Volumes ${NC}"
