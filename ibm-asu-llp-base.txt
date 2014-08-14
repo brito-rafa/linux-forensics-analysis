@@ -13,4 +13,4 @@ uEFI.ForceLegacyVideo=Enable
 uEFI.Rehook19=Disable
 uEFI.ThunkSupport=Enable
 uEFI.DemandScrub=Disable
-uEFI.ProcessorHyperThreading=Enable
+uEFI.ProcessorHyperThreading=Disable
