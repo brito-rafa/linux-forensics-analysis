@@ -708,7 +708,8 @@ let cpu_core=corecount+2
 mygrep="-A"$cpu_core
 
 # Checking for CPU Idle State for IBM Servers
-if grep -q "Vendor: IBM Corp." $STATIC; then
+#if grep -q "Vendor: IBM Corp." $STATIC; then
+if [ "$rhel" = "6" ]; then
 star_ibm=()
 cpu_ibm=()
 count_ibm=0
@@ -734,7 +735,9 @@ done
 fi
 
 # Checking CPU Idle state for HP Servers
-if grep -q "Vendor: HP" $STATIC; then
+#if grep -q "Vendor: HP" $STATIC; then
+if [ "$rhel" = "5" ]; then 
+
 star_hp=()
 cpu_hp=()
 count_hp=0
@@ -767,7 +770,8 @@ if [ $VERBOSE -eq 1 ]; then
         echo -e "${blue} Debugging... Checking for content switching ${NC}"
 fi
 content=0
-if grep -q "Vendor: IBM Corp." $STATIC; then
+#if grep -q "Vendor: IBM Corp." $STATIC; then
+if [ "$rhel" = "6" ]; then
 	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
 	bottle=0
 	nd=()
@@ -789,7 +793,8 @@ if grep -q "Vendor: IBM Corp." $STATIC; then
 fi
 
 content=0
-if grep -q "Vendor: HP" $STATIC; then
+#if grep -q "Vendor: HP" $STATIC; then
+if [ "$rhel" = "5" ]; then
 	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
 	bottle=0
 	nd=()
