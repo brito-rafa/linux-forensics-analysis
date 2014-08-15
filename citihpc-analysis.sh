@@ -103,7 +103,7 @@ if [[ "$rhel_release" =~ [/Santiago/] ]]; then
 else
         let rhel="5"
 fi
-echo " RHEL Version: $rhel"
+#echo " RHEL Version: $rhel"
 
 if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for presence of Logical Volumes ${NC}"
@@ -818,6 +818,7 @@ for ((i=0; i< ${#term_collector[@]};i++));do
 #	echo " ${term_collector[i]}" 
 	printf '%s\n' " ${term_collector[i]}"  | sort -u | uniq
 done
+
 echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
 
 # Heatmaps Generation
