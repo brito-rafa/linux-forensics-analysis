@@ -1,28 +1,7 @@
 #!/bin/bash
 #CitiHPC Forensic Analysis
 #Written by Kushal Mall
-#Version 1.16
-#History
-#Created 5/12/2014
-#1.0 - Check for  Logical Volume, Hyper-threading, Dmidecode, Memory Device
-#1.1 - LSPCI, SYSCTL Kernel Parameters, tcp_rmem, Ring Buffers
-#1.2 - Temp files removed,ASU
-#1.3 - Dynamic Data Analysis --
-#                             netstat -s : TCP Packet Retransmitted,UDP Packet Received Errors,TCP Data Loss Event, TCP Timeout Event
-#                             ifconfig : Error,Drop,Overrun,Frame                              
-#1.4 - Detect Broadcom Interface with IP, ethtool -k
-#1.5 - Check and headers added
-#1.6 - Verbose mode option added
-#1.7 - Process identification
-#1.8 - ASU base updated
-#1.9 - RX and TX check added for Active Interfaces
-#1.10 - Debug paramter added,Known Process Log Updated
-#1.11 - Displayeing system information from Forensic Output, VERBOSE edited
-#1.12 - Server Swap, Colour coding
-#1.13 - CPU Starvation 
-#1.14 - Verbose option added
-#1.15 - Check all dynamic files are compressed
-#1.16 - Invoking the heatmaps
+      
 
 TODAY=`date +%y%m%d`
 NOW=`date +%y%m%d-%H%M%S`
@@ -35,18 +14,11 @@ NC='\e[0m'
 
 
 user=`id | awk 'BEGIN { FS="("} { print $2}' | awk 'BEGIN { FS=")"} {print $1}'`
-
-#if [ "$runner" != "root" ]; then
-#        LogMsg "Your user account \"$runner\" is not authorized to run this installer. Only root is authorized." 
-#        exit 1
-#fi
 echo -e "${green} Info: User $user is executing the script ${NC}"
 
 # Parsing command line parameters
-
 # Checking for data files from forensic script
-if [[ -z "$1" ]]
-then
+if [[ -z "$1" ]]; then 
 	echo -e "${red} Usage: $0 <citihpc-forensic-data-directory>.Specifiy the path of the data directory. ${NC}"
 	exit 1
 else
@@ -57,10 +29,8 @@ else
 		exit 2
 	fi
         VERBOSE=0
-        if [[ -n "$2" ]]
-        then
-                if [ "$2" = "-v" ]
-                then
+        if [[ -n "$2" ]]; then 
+                if [ "$2" = "-v" ]; then 
                         VERBOSE=1
                         echo -e "${green} Info: Verbose Mode is ON ${NC}"
                 fi
@@ -71,8 +41,7 @@ fi
 # Checking for presence of Static Files
 STATIC=`ls ${MYDATADIR}/static* 2>/dev/null | head -1 2>/dev/null`
 
-if [ ! -f "$STATIC" ];
-then
+if [ ! -f "$STATIC" ]; then 
         echo -e "${red} Error: Could not find static file on $MYDATADIR data directory ${NC}"
         exit 3
 fi
@@ -82,49 +51,43 @@ echo -e "${green} Info: Starting Citi HPC Low Latency Analysis v1.16 on $TODAY a
 echo -e "${green} Info: System Specifications: $sysinfo"
 
 
-if [ $VERBOSE -eq 1 ]
-	then 
-		echo -e "${green} Info: 30 Parameters relevant to Low Latency will be checked during the analysis ${NC}"
-		echo -e "${green} Info: Data directory is $MYDATADIR ${NC}"
-		echo -e "${green} Info: Checking for presence of Dynamic Data Files ${NC}"
+if [ $VERBOSE -eq 1 ]; then 
+	echo -e "${green} Info: 30 Parameters relevant to Low Latency will be checked during the analysis ${NC}"
+	echo -e "${green} Info: Data directory is $MYDATADIR ${NC}"
+	echo -e "${green} Info: Checking for presence of Dynamic Data Files ${NC}"
 fi 
+
 FIRSTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | head -1 2>/dev/null`
 LASTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | tail -2 | head -1`
 ALLDYNAMIC=`ls ${MYDATADIR}/dynamic*gz`
 
 compress=`ls ${MYDATADIR}/dynamic*gz | wc -l `
 term_collector=()
-if [ $compress -lt 2 ]
-then 
+if [ $compress -lt 2 ]; then 
 	echo -e "${red} Error: Dynamic Files cannot be found or are not compressed!! ${NC}"
 	exit 6
 fi 
 
-if [ ! -f "$FIRSTDYNAMIC" ];
-then
+if [ ! -f "$FIRSTDYNAMIC" ]; then 
         echo -e "${red} Error: Could not find dynamic file on $MYDATADIR data directory ${NC}"
         exit 4
 fi
 
-if [ ! -z "$LASTDYNAMIC" ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ ! -z "$LASTDYNAMIC" ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${green} Info: Dynamic File Found .. variable assigning in progress ${NC}"
 	fi 
 else 
 	echo -e "${green} Info: Dynamic file not exisiting please check !! ${NC}"
 fi
 
-if [ ! -f "$LASTDYNAMIC" ];
-then
+if [ ! -f "$LASTDYNAMIC" ]; then 
 	echo -e "${red} Error: Could not find last dynamic file on $MYDATADIR data directory ${NC}"
 	exit 5
 fi
 
 
-if [ $VERBOSE -eq 1 ]
-then 
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${green} Info: Found $FIRSTDYNAMIC as first dynamic file ${NC}"
 	echo -e "${green} Info: Found $LASTDYNAMIC as last dynamic file ${NC}"
 fi
@@ -142,90 +105,71 @@ else
 fi
 echo " RHEL Version: $rhel"
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for presence of Logical Volumes ${NC}"
 fi
-if ! grep -q "Logical volume" $STATIC
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
+if ! grep -q "Logical volume" $STATIC; then 
+	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Logical Volume Not Present ${NC}"
 	else
 			term_collector+=('Logical Volume Manager is not in use. This can indicate that the system is not running the LLP build.')
 	fi
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for presence of Hyper-Threading ${NC}"
 fi
 
 cpu=`grep "cpu cores" $STATIC | uniq -d | awk '{print $4}'`
 sibling=`grep "siblings" $STATIC | uniq -d | awk '{print $3}'`
 
-if [ "$cpu" -ne "$sibling" ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ "$cpu" -ne "$sibling" ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Hyper-threading Detected -- Not Recommended for Low Latency Environment ${NC}"
 	else 
 			term_collector+=('Hyper-threading(HT)is enabled.HT is not recommended for low latency due to jitter.')
 	fi
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for uniform memory speed ${NC}"
 fi
 
 speedcnt=`grep -A17 "Memory Device" $STATIC | grep -e Speed  |grep -vi "Unknown"| uniq -d | awk '{print $2}' | wc -l`
 
-if [ $speedcnt -gt 1 ]
-then
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ $speedcnt -gt 1 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Speed is not uniform across memory devices ${NC}"
 	else
 			term_collector+=('Memory Speed is not uniform across the memory devices which may result in performance degradation.')
 	fi
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for uniform memory size ${NC}"
 fi
 
 uniformmem=`grep -A17 "Memory Device" $STATIC | grep -e Size | grep -v "No"|  sort | uniq -d | wc -l`
 
-if [ $uniformmem -gt 1 ]
-then 
-	if [ $VERBOSE -eq 1 ]
-		then 
+if [ $uniformmem -gt 1 ]; then 
+	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Memory Size Not Uniform ${NC}"
 		else
 			term_collector+=('Non uniform memory size has been detected which may lead to unpredictable speed and memory access.')
 	fi
 fi
 
-if [ $VERBOSE -eq 1 ]
-then
+if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for Broadcom NIC Interface ${NC}"
 fi
 
 ch=0
 arr2=()
-#arr1=(`grep -A1 ^eth  $STATIC | awk '{print $1}'`)
 arr1=(`grep "Ring parameters"  $STATIC | awk '{print $4}'| sed -e 's/://g'`)
 for ((i=0; i< ${#arr1[@]};i++)); do
- #               if [ "${arr1[i]}" == "inet" ]
-#	                then
-#                       echo "Active Interface:${arr1[i-1]}"
-#	                        arr2+=(${arr1[i-1]})
-				arr2+=(${arr1[i]})
-	                        let ch=ch+1
- #               fi
-done
+	arr2+=(${arr1[i]})
+	let ch=ch+1
+done    
 
 arr3=(`grep  -e "Broadcom" $STATIC | awk '{print $3}' | grep ^eth | sed 's/://g'`)
 
@@ -707,62 +651,60 @@ corecount=`grep  ^processor $STATIC | tail -1 | awk '{print $3}'`
 let cpu_core=corecount+2
 mygrep="-A"$cpu_core
 
-# Checking for CPU Idle State for IBM Servers
-#if grep -q "Vendor: IBM Corp." $STATIC; then
+# Checking for CPU Idle State for Servers running RHEL 6
 if [ "$rhel" = "6" ]; then
-star_ibm=()
-cpu_ibm=()
-count_ibm=0
-star_ibm=`zgrep $mygrep "%idle" $ALLDYNAMIC | grep "Average:" | awk '{print $11}'`
-for i in $star_ibm; do
-	cpu_ibm[count_ibm]=`echo $i`
-	let count_ibm=count_ibm+1
-done
-for((i=0; i<${#cpu_ibm[@]};i++)) do
-	if [ "${cpu_ibm[i]}" = "%idle" ]; then 
-        		cpu_ibm[$i]=10
-	fi
-done
-for ((i=0; i< ${#cpu_ibm[@]};i++)) do
-	if [[ "${cpu_ibm[i]}" < "1" ]];then
-		if [ $VERBOSE -eq 1 ]; then 
-	       echo -e "${red} Warning: CPU Starvation Detected:${cpu_ibm[i]}.Please check CPU Heat Map. ${NC}"
-	else
-		term_collector+=('High CPU Utilization detected.')
-		fi
-	fi
-done
+	star_ibm=()
+	cpu_ibm=()
+	count_ibm=0
+	star_ibm=`zgrep $mygrep "%idle" $ALLDYNAMIC | grep "Average:" | awk '{print $11}'`
+		for i in $star_ibm; do
+			cpu_ibm[count_ibm]=`echo $i`
+			let count_ibm=count_ibm+1
+		done
+		for((i=0; i<${#cpu_ibm[@]};i++)) do
+			if [ "${cpu_ibm[i]}" = "%idle" ]; then 
+        			cpu_ibm[$i]=10
+			fi
+		done
+		for ((i=0; i< ${#cpu_ibm[@]};i++)) do
+			if [[ "${cpu_ibm[i]}" < "1" ]];then
+				if [ $VERBOSE -eq 1 ]; then 
+				       echo -e "${red} Warning: CPU Starvation Detected:${cpu_ibm[i]}.Please check CPU Heat Map. ${NC}"
+				else
+					term_collector+=('High CPU Utilization detected.')
+				fi
+			break
+			fi
+		done
 fi
 
-# Checking CPU Idle state for HP Servers
-#if grep -q "Vendor: HP" $STATIC; then
+# Checking CPU Idle state for Servers running RHEL 5
 if [ "$rhel" = "5" ]; then 
+	star_hp=()
+	cpu_hp=()
+	count_hp=0
+	star_hp=`zgrep $mygrep "%idle" $ALLDYNAMIC | grep "Average:" | awk '{print $8}'`
+		for i in $star_hp; do
+			cpu_hp[count_hp]=`echo $i`
+			let count_hp=count_hp+1
+		done
 
-star_hp=()
-cpu_hp=()
-count_hp=0
-star_hp=`zgrep $mygrep "%idle" $ALLDYNAMIC | grep "Average:" | awk '{print $8}'`
-for i in $star_hp; do
-	cpu_hp[count_hp]=`echo $i`
-	let count_hp=count_hp+1
-done
-
-for((i=0; i<${#cpu_hp[@]};i++)) do
-	if [ "${cpu_hp[i]}" = "%idle" ]
-		then
-		        cpu_hp[$i]=10
-	fi
-done
-for ((i=0; i< ${#cpu_hp[@]};i++)) do
-	if [[ "${cpu_hp[i]}" < "1" ]];then 
-		if [ $VERBOSE -eq 1 ]; then 
-		       echo -e "${red} Warning: CPU less than 10% idle has been detected. Please check CPU Heat Map. ${NC}"
-		else 
-			term_collector+=('High CPU Utilization detected.')
-		fi
-	break
-	fi
-done
+		for((i=0; i<${#cpu_hp[@]};i++)) do
+			if [ "${cpu_hp[i]}" = "%idle" ]
+			then
+			        cpu_hp[$i]=10
+			fi
+		done
+		for ((i=0; i< ${#cpu_hp[@]};i++)) do
+			if [[ "${cpu_hp[i]}" < "1" ]];then 
+				if [ $VERBOSE -eq 1 ]; then 
+				       echo -e "${red} Warning: CPU less than 10% idle has been detected. Please check CPU Heat Map. ${NC}"
+				else 
+					term_collector+=('High CPU Utilization detected.')
+				fi
+			break
+			fi
+		done
 fi
 
 # Checking for Excessive Content Switching
@@ -770,49 +712,48 @@ if [ $VERBOSE -eq 1 ]; then
         echo -e "${blue} Debugging... Checking for content switching ${NC}"
 fi
 content=0
-#if grep -q "Vendor: IBM Corp." $STATIC; then
 if [ "$rhel" = "6" ]; then
 	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
 	bottle=0
 	nd=()
 	bottle_neck=()
 	nd=`zgrep -A1 "cswch/s" $ALLDYNAMIC | awk '{print $4}' | sed -e 's/cswch\/s/ /g'`
-	for i in $nd; do
-		bottle_neck[bottle]=`echo $i`
-		let bottle=bottle+1
-	done
-	for ((i=0; i<${#bottle_neck[@]} ;i++)) do
-		if [[ "${bottle_neck[i]}" > "3000" ]]; then 
-			if [ $VERBOSE -eq 1 ]; then 
-				echo -e "${red} Warning: $content instances of Context Switching has been detected ${NC}"
-			else
-				term_collector+=('Context Switching')
+		for i in $nd; do
+			bottle_neck[bottle]=`echo $i`
+			let bottle=bottle+1
+		done
+		for ((i=0; i<${#bottle_neck[@]} ;i++)) do
+			if [[ "${bottle_neck[i]}" > "3000" ]]; then 
+				let content=content+1
 			fi
-		fi
-	done
+		done
+	if [ $VERBOSE -eq 1 ]; then 
+		echo -e "${red} Warning: $content instances of Context Switching has been detected ${NC}"
+	else
+		term_collector+=('Context Switching')
+	fi
 fi
 
 content=0
-#if grep -q "Vendor: HP" $STATIC; then
 if [ "$rhel" = "5" ]; then
 	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
 	bottle=0
 	nd=()
 	bottle_neck=()
 	nd=`zgrep -A1 "cswch/s" $ALLDYNAMIC | awk '{print $3}' | sed -e 's/cswch\/s/ /g'`
-	for i in $nd; do
-		bottle_neck[bottle]=`echo $i`
-		let bottle=bottle+1
-	done
-	for ((i=0; i<${#bottle_neck[@]} ;i++)) do
-		if [[ "${bottle_neck[i]}" > "3000" ]]; then 
-	        	let content=content+1
-		fi
-	done
+		for i in $nd; do
+			bottle_neck[bottle]=`echo $i`
+			let bottle=bottle+1
+		done
+		for ((i=0; i<${#bottle_neck[@]} ;i++)) do
+			if [[ "${bottle_neck[i]}" > "3000" ]]; then 
+		        	let content=content+1
+			fi
+		done
 	if [ $VERBOSE -eq 1 ]; then 
 		echo -e "${red} Warning: $content instances of Context Switching has been detected ${NC}"
 	else
-			term_collector+=('Context Switching')
+		term_collector+=('Context Switching')
 	fi
 fi
 
@@ -874,7 +815,8 @@ function disk_utilization_check {
 #disk_utilization_check
 echo -e "${red} Warning: Following Sub Optimal Configurations have been detected in the system:"
 for ((i=0; i< ${#term_collector[@]};i++));do
-	echo " ${term_collector[i]}"
+	echo " ${term_collector[i]}" 
+#	printf '%s\n' "${term_collector[i]}" | sort -u 
 done
 echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
 
