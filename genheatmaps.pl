@@ -160,7 +160,7 @@ sub gettingbasicinfo {
 	# detecting the number of CPUs
 	$numcores = `grep ^processor  $ARGV[0]/static-* | tail -1 | awk '{print \$3}'`; chomp($numcores);
 	# detecting active NICs - from ip addr command
-	my @tempactivenics = `grep inet $ARGV[0]/static-* | grep global | awk '{print \$NF}'`;
+	my @tempactivenics = `grep inet $ARGV[0]/static-* | grep global | awk '{print \$NF}' | egrep \"eth|bond\"`;
 	for (@tempactivenics) {
 		chomp;
 		if (/bond/) {
