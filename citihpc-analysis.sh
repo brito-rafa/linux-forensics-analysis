@@ -477,12 +477,12 @@ if [ $timediff -gt 0 ]; then
 fi
 
 
-if [ $VERBOSE -eq 1 ]; then 
-	echo -e "${blue} Debugging... Printing all active interfaces ${NC}"
-		for ((i=0; i< ${#arr2[@]};i++));do
-			echo ${arr2[i]}
-		done
-fi
+#if [ $VERBOSE -eq 1 ]; then 
+#	echo -e "${blue} Debugging... Printing all active interfaces ${NC}"
+#		for ((i=0; i< ${#arr2[@]};i++));do
+#			echo ${arr2[i]}
+#		done
+#fi
 
 if [ $VERBOSE -eq 1 ]; then 
 	echo -e "${blue} Debugging... Checking for Error Frame Drop for TX and RX interfaces ${NC}"
@@ -815,8 +815,8 @@ function disk_utilization_check {
 #disk_utilization_check
 echo -e "${red} Warning: Following Sub Optimal Configurations have been detected in the system:"
 for ((i=0; i< ${#term_collector[@]};i++));do
-	echo " ${term_collector[i]}" 
-#	printf '%s\n' "${term_collector[i]}" | sort -u 
+#	echo " ${term_collector[i]}" 
+	printf '%s\n' " ${term_collector[i]}"  | sort -u | uniq
 done
 echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
 
