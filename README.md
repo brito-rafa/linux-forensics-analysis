@@ -41,6 +41,7 @@ genheatmaps.pl
 1.8 - 2014/07/28 - disk read and write heatmaps
 1.9 - 2014/07/29 - coded/tested to support up to 160 CPUs and 800 disks
 2.0 - 2014/08/11 - coded to support 1000+ dynamic files
+2014-08-15 - fixed bug showing usb as active NIC interface
 ```
 
 ```
