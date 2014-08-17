@@ -634,9 +634,9 @@ if [ $VERBOSE -eq 1 ]; then
         echo -e "${blue} Debugging... Checking for Server Swap ${NC}"
 fi
 server_swap=`zgrep -A4 "Info: free ..." $ALLDYNAMIC | sed -n '5,5p' | awk '{print $3}'`
-if [ $server_swap -eq 0 ]; then 
-	echo -e "${green} Info: No Server Swapping ${NC}"
-else
+if [ $server_swap -ne 0 ]; then 
+#	echo -e "${green} Info: No Server Swapping ${NC}"
+#else
 	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Server Swapping Detected with a current usage of $server_swap bytes. Please refer Memory Heat Map. ${NC}"
 	else 
@@ -713,7 +713,6 @@ if [ $VERBOSE -eq 1 ]; then
 fi
 content=0
 if [ "$rhel" = "6" ]; then
-	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
 	bottle=0
 	nd=()
 	bottle_neck=()
@@ -736,7 +735,6 @@ fi
 
 content=0
 if [ "$rhel" = "5" ]; then
-	echo -e "${green} Info: Checking for Excessive Context Switching ${NC}"
 	bottle=0
 	nd=()
 	bottle_neck=()
