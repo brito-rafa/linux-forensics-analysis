@@ -815,9 +815,8 @@ function disk_utilization_check {
 #disk_utilization_check
 echo -e "${red} Warning: Following Sub Optimal Configurations have been detected in the system:"
 for ((i=0; i< ${#term_collector[@]};i++));do
-#	echo " ${term_collector[i]}" 
-	printf '%s\n' " ${term_collector[i]}"  | sort -u | uniq
-done
+	echo " ${term_collector[i]}" 
+done | sort | uniq
 
 echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
 
