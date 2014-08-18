@@ -220,8 +220,8 @@ sys_actual_para=()
 sys_actual_val=()
 sys_var1=0
 sys_var2=0
-sys_parameter=`cat kernellog.txt | awk  '{print $1}'`
-sys_value=`cat kernellog.txt | awk  '{print $3}'`
+sys_parameter=`cat kernel.config | awk  '{print $1}'`
+sys_value=`cat kernel.config | awk  '{print $3}'`
 for i in $sys_parameter; do
 	sys_ref_para[sys_var1]=`echo $i`
 	let sys_var1=sys_var1+1
@@ -322,8 +322,8 @@ if grep -q "Vendor: IBM Corp." $STATIC; then
 	asu_var1=0
 	asu_var2=0
 	asu_actual_val=()
-	asu_parameter=`cat ibm-asu-llp-base.txt | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $1}'`
-	asu_value=`cat ibm-asu-llp-base.txt | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $3}'`
+	asu_parameter=`cat ibm-asu.config | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $1}'`
+	asu_value=`cat ibm-asu.config | awk  '{print $1}' | sed -e 's/=/ = /g' | awk '{print $3}'`
 		for i in $asu_parameter; do
 			asu_ref_para[asu_var1]=`echo $i`
 			let asu_var1=asu_var1+1
@@ -364,8 +364,8 @@ if [ "$conrep" !=  "" ] && [ -f $conrep ]; then
 	actual_value=()
 	var1=0
 	var2=0
-	parameter=`cat conrep.config | awk  '{print $1}'`
-	value=`cat conrep.config | awk  '{print $3}'`
+	parameter=`cat hp-conrep.config | awk  '{print $1}'`
+	value=`cat hp-conrep.config | awk  '{print $3}'`
 
 	for i in $parameter; do
 		ref_parameter[var1]=`echo $i`
