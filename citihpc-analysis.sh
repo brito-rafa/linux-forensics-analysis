@@ -47,7 +47,7 @@ if [ ! -f "$STATIC" ]; then
 fi
 
 sysinfo=`grep -A1 "Info: uname -a" $STATIC | sed -n '2,2p'`
-echo -e "${green} Info: Starting Citi HPC Low Latency Analysis v1.16 on $TODAY at $NOW ${NC}"
+echo -e "${green} Info: Starting Citi HPC Low Latency Analysis on $TODAY at $NOW ${NC}"
 echo -e "${green} Info: System Specifications: $sysinfo"
 
 
@@ -112,7 +112,7 @@ if ! grep -q "Logical volume" $STATIC; then
 	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Logical Volume Not Present ${NC}"
 	else
-			term_collector+=('Logical Volume Manager is not in use. This can indicate that the system is not running the LLP build.')
+			term_collector+=('Logical Volume Manager is not in use. This can indicate that the system is not running the LLP build')
 	fi
 fi
 
@@ -127,7 +127,7 @@ if [ "$cpu" -ne "$sibling" ]; then
 	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Hyper-threading Detected -- Not Recommended for Low Latency Environment ${NC}"
 	else 
-			term_collector+=('Hyper-threading(HT)is enabled.HT is not recommended for low latency due to jitter.')
+			term_collector+=('Hyper-threading(HT)is enabled.HT is not recommended for low latency due to jitter')
 	fi
 fi
 
@@ -141,7 +141,7 @@ if [ $speedcnt -gt 1 ]; then
 	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Speed is not uniform across memory devices ${NC}"
 	else
-			term_collector+=('Memory Speed is not uniform across the memory devices which may result in performance degradation.')
+			term_collector+=('Memory Speed is not uniform across the memory devices which may result in performance degradation')
 	fi
 fi
 
@@ -155,7 +155,7 @@ if [ $uniformmem -gt 1 ]; then
 	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Memory Size Not Uniform ${NC}"
 		else
-			term_collector+=('Non uniform memory size has been detected which may lead to unpredictable speed and memory access.')
+			term_collector+=('Non uniform memory size has been detected which may lead to unpredictable speed and memory access')
 	fi
 fi
 
@@ -204,7 +204,7 @@ for ((i=0;i<${#arr_hp[@]};i++)); do
 					then 
                         		       echo -e "${red} Warning: Broadcom NIC detected for interface ${arr_hp[i]}. Not a recommended NIC Vendor. ${NC}"
 				else
-					       term_collector+=('Network interface is using a Broadcom chip set which is not recommended for low latency.')	
+					       term_collector+=('Network interface is using a Broadcom chip set which is not recommended for low latency')	
 				fi
 		 fi
 	done
@@ -246,7 +246,7 @@ for ((i=0; i<${#sys_actual_para[@]};i++)); do
   			if [ $VERBOSE -eq 1 ]; then 
 				echo -e "${red} Warning: Parameter mismatch for: ${sys_actual_para[i]}. Value detected: ${sys_actual_val[i]}. Actual Value Expected: ${sys_ref_val[i]} ${NC}"
 			else 
-				term_collector+=('Kernel Parameters are not finely tuned for low latency.')
+				term_collector+=('Kernel Parameters are not finely tuned for low latency')
 			fi
         fi
 done
@@ -268,7 +268,7 @@ if [ "${arr[$COUNTER]}" != "" ]; then
 					then 
 			    			echo -e "${red} Warning: Check RX Ring Buffer settings for interface ${arr[$COUNTER]}. Current Settings: $current_RX. Maximum Settings: $max_RX ${NC}"
 				else
-						term_collector+=('The receive ring buffer is not set to the maximum. This can lead to packet drops.')
+						term_collector+=('The receive ring buffer is not set to the maximum. This can lead to packet drops')
 
 				fi
 		fi
@@ -278,7 +278,7 @@ if [ "${arr[$COUNTER]}" != "" ]; then
 			if [ $VERBOSE -eq 1 ]; then 
 				echo -e "${red} Warning: Check TX Ring Buffer settings for interface ${arr[$COUNTER]}. Current Settings: $current_TX. Maximum Settings:$max_TX ${NC}"
 				else 
-				term_collector+=('The receive ring buffer is not set to the maximum. This can lead to packet drops.')
+				term_collector+=('The receive ring buffer is not set to the maximum. This can lead to packet drops')
 			fi
 		fi              
              	let COUNTER=COUNTER+1
@@ -294,7 +294,7 @@ for ((i=0; i< ${#tcpseg[@]};i++)); do
 		if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: TCP Segmentation Offload is Off ${NC}"		
 		else
-			term_collector+=('TCP Segmentation Offload is disabled which can lead to higher CPU utilization.')
+			term_collector+=('TCP Segmentation Offload is disabled which can lead to higher CPU utilization')
 		fi
 	fi
 done
@@ -308,7 +308,7 @@ for ((i=0; i< ${#genseg[@]};i++)); do
 		if [ $VERBOSE -eq 1 ]; then
 			echo -e "${red} Warning: Generic Segmentation is Off ${NC}"
 		else 
-			term_collector+=('Generic Segmentation Offload is disabled which can lead to higher CPU utilization.')	
+			term_collector+=('Generic Segmentation Offload is disabled which can lead to higher CPU utilization')	
 		fi
 	fi
 done
@@ -348,7 +348,7 @@ if grep -q "Vendor: IBM Corp." $STATIC; then
 				if [ $VERBOSE -eq 1 ]; then 
 	                        	echo -e "${red} Warning: Parameter mismatch for: ${asu_actual_para[i]}. Value detected: ${asu_actual_val[i]}. Actual Value Expected: ${asu_ref_val[i]} ${NC}"
 			else
-					term_collector+=('BIOS settings are not optimized for low latency.')
+					term_collector+=('BIOS settings are not optimized for low latency')
 				fi
 		        fi
 		done
@@ -384,7 +384,7 @@ if [ "$conrep" !=  "" ] && [ -f $conrep ]; then
 			if [ $VERBOSE -eq 1 ]; then
 				echo -e "${red} Warning: Parameter mismatch for ${ref_parameter[i]}. Value Detected: ${actual_value[i]}. Actual Value Expected: ${ref_value[i]} ${NC}"
 			else
-				term_collector+=('BIOS settings are not optimized for low latency.')	
+				term_collector+=('BIOS settings are not optimized for low latency')	
 			fi
 		fi
 	done
@@ -409,7 +409,7 @@ then
 		then 
 			echo -e "${red} Warning: TCP Segment Retransmission Detected with a packet difference of $dif ${NC}"
 	else 
-			term_collector+=('TCP Segment Retransmission detected which may indicate network degradation.')
+			term_collector+=('TCP Segment Retransmission detected which may indicate network degradation')
 	fi
 else
 	dif=`expr $tcp1 - $tcp2`
@@ -417,7 +417,7 @@ else
 		then 
 			echo -e "${red} Warning: TCP Segment Retransmission Detected with a packet difference of $dif ${NC}"
 	else 
-			term_collector+=('TCP Segment Retransmission detected which may indicate network degradation.')
+			term_collector+=('TCP Segment Retransmission detected which may indicate network degradation')
 	fi
 fi
 
@@ -435,7 +435,7 @@ if [ $udpdiff -gt 0 ]; then
 	if [ $VERBOSE -eq 1 ]; then 
 		echo -e "${red} Warning: UDP Packet Received Error detected with a packet difference of $udpdiff ${NC}"
 	else 
-		term_collector+=('UDP Packet Received Errors detected which may indicate network degradation.')
+		term_collector+=('UDP Packet Received Errors detected which may indicate network degradation')
 	fi
 fi
 
@@ -454,7 +454,7 @@ if [ $datadiff -gt 0 ]; then
 	if [ $VERBOSE -eq 1 ]; then 
 		echo -e "${red} Warning: TCP Data Loss detected with a difference of $datadiff bytes ${NC}"
 	else 
-		term_collector+=('TCP Data Loss detected which may indicate network degradation.')
+		term_collector+=('TCP Data Loss detected which may indicate network degradation')
 	fi
 fi
 
@@ -472,7 +472,7 @@ if [ $timediff -gt 0 ]; then
 	if [ $VERBOSE -eq 1 ]; then 
 		echo -e "${red} Warning: TCP Time-Out detected with a difference of $timediff ${NC}"
 	else 
-		term_collector+=('TCP Time-Out has been detected which may indicate network degradation.')
+		term_collector+=('TCP Time-Out has been detected which may indicate network degradation')
 	fi
 fi
 
@@ -640,7 +640,7 @@ if [ $server_swap -ne 0 ]; then
 	if [ $VERBOSE -eq 1 ]; then 
 			echo -e "${red} Warning: Server Swapping Detected with a current usage of $server_swap bytes. Please refer Memory Heat Map. ${NC}"
 	else 
-			term_collector+=('Memory Swapping has been detected which could cause severe performance degradation.')
+			term_collector+=('Memory Swapping has been detected which could cause severe performance degradation')
 	fi
 fi
 
@@ -671,7 +671,7 @@ if [ "$rhel" = "6" ]; then
 				if [ $VERBOSE -eq 1 ]; then 
 				       echo -e "${red} Warning: CPU Starvation Detected:${cpu_ibm[i]}.Please check CPU Heat Map. ${NC}"
 				else
-					term_collector+=('High CPU Utilization detected.')
+					term_collector+=('High CPU Utilization detected')
 				fi
 			break
 			fi
@@ -700,7 +700,7 @@ if [ "$rhel" = "5" ]; then
 				if [ $VERBOSE -eq 1 ]; then 
 				       echo -e "${red} Warning: CPU less than 10% idle has been detected. Please check CPU Heat Map. ${NC}"
 				else 
-					term_collector+=('High CPU Utilization detected.')
+					term_collector+=('High CPU Utilization detected')
 				fi
 			break
 			fi
@@ -811,13 +811,13 @@ function disk_utilization_check {
 }
 
 #disk_utilization_check
-echo -e "${red} Warning: Following Sub Optimal Configurations have been detected in the system:"
-for ((i=0; i< ${#term_collector[@]};i++));do
-	echo " ${term_collector[i]}" 
-done | sort | uniq
-
-echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
-
+if [ $VERBOSE -ne 1 ];then
+	echo -e "${red} Warning: Following Sub Optimal Configurations have been detected in the system:"
+		for ((i=0; i< ${#term_collector[@]};i++));do
+			echo " ${term_collector[i]}" 
+		done | sort | uniq
+	echo -e " Please Contact SA for help!. For technical details execute the script in Verbose mode (-v). Thank You. ${NC}"
+fi
 # Heatmaps Generation
 echo -e "${green} Info: Creating heatmap files... ${NC}" 
 ./genheatmaps.pl ${MYDATADIR}
