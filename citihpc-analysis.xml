@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<!--citihpc-analysis.xml version="1.0" timestamp="2014-08-21 00:00:00"-->
+<!-- created by Rafael Brito rb36135 CitiHPC -->
+<forensics-config>
+	<contextswitchwarning>5000</contextswitchwarning>
+	<cpuwarning>1</cpuwarning>
+	<disklatencywarning>10</disklatencywarning>
+	<!-- HT should be ... -->
+	<hyperthread>off</hyperthread>
+	<heatmapfilename>citihpc-forensics-heatmap-</heatmapfilename>
+	<ibmbios>
+		<parameter name="IMM.ThermalModePolicy">
+		<value>Performance</value>
+		</parameter>
+		<parameter name="uEFI.TurboModeEnable">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.ProcessorEistEnable">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.ProcessorCcxEnable">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.ProcessorC1eEnable">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.ExecuteDisableBit">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.ProcessorVmxEnable">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.PatrolScrub">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.IdeMode">
+		<value>Native</value>
+		</parameter>
+		<parameter name="uEFI.EnergyManager">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.RebootOnNMI">
+		<value>Enable</value>
+		</parameter>
+		<parameter name="uEFI.ForceLegacyVideo">
+		<value>Enable</value>
+		</parameter>
+		<parameter name="uEFI.Rehook19">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.ThunkSupport">
+		<value>Enable</value>
+		</parameter>
+		<parameter name="uEFI.DemandScrub">
+		<value>Disable</value>
+		</parameter>
+		<parameter name="uEFI.ProcessorHyperThreading">
+		<value>Disable</value>
+		</parameter>
+	</ibmbios>
+</forensics-config>
