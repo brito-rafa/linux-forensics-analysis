@@ -154,12 +154,14 @@ sub gettingbasicinfo {
 sub reading_config {
 	$simple = XML::Simple->new(); 
 	$config_file = $simple->XMLin('./citihpc-analysis.xml'); 
-#	print Dumper($config_file);
+	#print Dumper($config_file);
 }
 
 sub parsing_static {
 
 	my @tempactivenics; my $tempcpucores; my $tempcpusiblings; my @tempmemsize; my @tempmemspeed;
+	my @tempbroadcom; my %tempkernelparam; my @tempkernelvalue; my $counter; my $kernelparam;
+	my $arraycounter;
 
 	# will parse the static file and fill a bunch of temp variables for later conditions
 	print BLUE, "Debug: Starting to parse static data\n", RESET if ($verbose);
@@ -180,7 +182,26 @@ sub parsing_static {
 
 		push (@tempmemsize, $1) if (/^\s+Size:\s(\d+)\sMB/);
 		push (@tempmemspeed, $1) if (/^\s+Speed:\s(\d+)\sMHz/);
+
+		push (@tempbroadcom, $1) if (/(eth\d):.*Broadcom/);
+
+
+		# building a hash for kernel paramters
+		if (/^(kernel|vm|fs|dev|net|abi|crypto|sunrpc\.)(.*)\s=\s(.*)/) {
+			# sometimes the kernel value can be multiple numbers or words
+			@tempkernelvalue = split (/\s+/, $3);
+			$kernelparam = "$1"."$2";
+			# if the values are indeed an array, treat as such
+				$counter = 0;
+				foreach (@tempkernelvalue) {
+					$tempkernelparam{$kernelparam}[$counter] = $_;
+					$counter++;
+				}
+
+		}
 	}
+
+	print Dumper (\%tempkernelparam);
 
 	# hyperthread check
 	if ( $tempcpucores eq $tempcpusiblings )  {
@@ -211,7 +232,7 @@ sub parsing_static {
 	}
 	
 	print BLUE, "Debug: Checking uniformity of speed and size of memory\n", RESET if ($verbose);
-	my $arraycounter; my @uniqarray;
+	my @uniqarray;
 
 	@uniqarray = uniq ( @tempmemsize );
 	$arraycounter = @uniqarray;
@@ -252,8 +273,17 @@ sub parsing_static {
 	@activenics = keys (%test_nic); 
 	$total_nics = @activenics;
 	#print Dumper(\@activenics);
+	#
+	#
+	# Checking if any of the active internface is a broadcom
+	foreach (@tempbroadcom) {
+		if (exists $test_nic{$_}) {
+			print RED, "Warning: Broadcom NIC detected for interface $_. Not a Recommended Vendor\n", RESET if ($verbose);
+			push (@term_collector, "Broadcom NIC has been detected in use on the system for interface $_.Not a favoured vendor!\n");
+		}
+	}
 
-
+#	&checking_kernel;
 	
 	#
 #	#detecting the list of disks - they must be have "*vg-*" on it - this data is only on dynamic
