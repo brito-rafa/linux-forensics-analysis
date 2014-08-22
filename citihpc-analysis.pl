@@ -5,6 +5,7 @@ use warnings;
 
 use Data::Dumper;
 use Term::ANSIColor qw(:constants);
+use XML::Simple;
 
 
 # key variables
@@ -18,6 +19,16 @@ my $hostnam;
 my $hypert;
 my $memtot; my $rhel; my $numcores; my @activenics; my $total_nics; my %test_nic; my @list_disks; my $total_disks;
 my $dateofdata;
+my $simple; my $config_file;
+
+my $graphdat; $graphdat = "graph.forensic.dat"; 
+my $graphdatmem; $graphdatmem = "graph.forensic.mem.dat"; 
+my $graphdatnic; $graphdatnic = "graph.forensic.nic.dat"; 
+my $graphdatdiskawait; $graphdatdiskawait = "graph.forensic.disk.await.dat"; 
+my $graphdatdiskcpu; $graphdatdiskcpu = "graph.forensic.disk.cpu.dat"; 
+my $graphdatdiskread; $graphdatdiskread = "graph.forensic.disk.read.dat"; 
+my $graphdatdiskwrite; $graphdatdiskwrite = "graph.forensic.disk.write.dat"; 
+ 
 
 
 # Finally executing the code
@@ -26,18 +37,20 @@ my $dateofdata;
 # my subroutines - main as a first
 sub main {
 
-	if (undef $ARGV[0]) {
+	if (! exists $ARGV[0]) {
 		&usage;
 	}
 	&display_header();
 	&checking_datadir();
 	&gettingbasicinfo();
-	&parsing_log();
+	&reading_config();
+	&parsing_static();
+#	&parsing_dynamic();
 
 }
 
 sub usage {
-	print RED, "Usage: $0 <citihpc-forensic-data-directory>.Specifiy the path of the citihpc forensic collector data directory.\n", RESET;
+	print RED, "Usage: $0 <citihpc-forensic-collector-data-directory> [-v]\nSpecifiy the path of the citihpc forensic collector data directory.\n", RESET;
 	exit;
 }
 
@@ -46,7 +59,7 @@ sub display_header {
 	$TODAY=`date +%y%m%d`; chomp ($TODAY);
 	$NOW=`date +%y%m%d-%H%M%S`; chomp ($NOW);
 
-	$user=`id | awk 'BEGIN { FS="("} { print \$2}' | awk 'BEGIN { FS=")"} {print \$1}'`; chomp($user);
+	my $user=`id | awk 'BEGIN { FS="("} { print \$2}' | awk 'BEGIN { FS=")"} {print \$1}'`; chomp($user);
 
 
 	print GREEN, "Info: Starting Citi HPC Low Latency Analysis on $TODAY at $NOW\n", RESET;
@@ -56,7 +69,7 @@ sub display_header {
 
 sub checking_datadir {
 
-	if (-d $ARG[0]) {
+	if ((exists $ARGV[0]) && (-d $ARGV[0])) {
 		$MYDATADIR = $ARGV[0];	
 	} else {
 		print RED, "Error: could not open data directory $ARGV[0] !\n", RESET;
@@ -71,7 +84,7 @@ sub checking_datadir {
 
 	$STATIC=`ls ${MYDATADIR}/static* 2>/dev/null | head -1 2>/dev/null`; chomp($STATIC);
 
-	if ! (-f $STATIC) {
+	if ( ! -f $STATIC) {
 		print RED, "Error: Could not find static file on $MYDATADIR data directory!\n", RESET;
 		usage;
 		exit 3;
@@ -92,8 +105,8 @@ sub checking_datadir {
 
 	$FIRSTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | head -1 2>/dev/null`; chomp($FIRSTDYNAMIC);
 
-	if ! (-f $FIRSTDYNAMIC) {
-		print RED, "Error: Could not find dynamic file on $MYDATADIR data directory!\n", RESET;
+	if ( ! -f $FIRSTDYNAMIC) {
+		print RED, "Error: Could not find first dynamic file on $MYDATADIR data directory!\n", RESET;
 		usage;
 		exit 3;
 	} else {
@@ -102,8 +115,8 @@ sub checking_datadir {
 
 	$LASTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | tail -2 | head -1`; chomp($LASTDYNAMIC);
 
-	if ! (-f $LASTDYNAMIC) { 
-		print RED, "Error: Could not find dynamic file on $MYDATADIR data directory!\n", RESET;
+	if ( ! -f $LASTDYNAMIC) { 
+		print RED, "Error: Could not find last dynamic file on $MYDATADIR data directory!\n", RESET;
 		usage;
 		exit 3;
 	} else {
@@ -130,7 +143,8 @@ sub gettingbasicinfo {
 		$rhel = "5";
 	}
 
-	print GREEN, "Info: $hostname RHEL$rhel \n";
+	print GREEN, "Info: Collector data for hostname $hostnam , RHEL$rhel version\n", RESET;
+
 	# date of collection
 	my $tempdate = `grep CitiHPC  $STATIC | tail -1`; chomp ($tempdate);
 	$dateofdata = "$1/$2/$3" if ($tempdate =~ /on\s(\d\d)(\d\d)(\d\d)\sat/);
@@ -147,53 +161,64 @@ sub gettingbasicinfo {
 		}
 	}
 	# detecting the number of CPUs
-	$numcores = `grep ^processor  $ARGV[0]/static-* | tail -1 | awk '{print \$3}'`; chomp($numcores);
-	# detecting active NICs - from ip addr command
-	my @tempactivenics = `grep inet $ARGV[0]/static-* | grep global | awk '{print \$NF}'`;
-	for (@tempactivenics) {
-		chomp;
-		if (/bond/) {
-			# i need to make an extra step
-			$nicextralegend = "(bonded NICs)";
-			my @bondedinterfaces = `grep master $ARGV[0]/static-* | grep $_ | awk '{print \$2}' | awk -F: '{print \$1}'`;
-			for (@bondedinterfaces) {
-				chomp;
-				$test_nic{$_} = 1;
-			}
-
-		} else {
-			$test_nic{$_} = 1;
-		}
-	}
-	@activenics = keys (%test_nic); 
-	$total_nics = @activenics;
-	#print Dumper(\@activenics);
-	#
-	#detecting the list of disks - they must be have "*vg-*" on it
-	my $dynamicfile = `ls $ARGV[0]/dynamic-*gz | tail -1`; chomp $dynamicfile;
-	my @temp_list_disks = `zcat $dynamicfile`; my %temp_disk;
-	for (@temp_list_disks) {
-		if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+)\s+\d+\.*/){
-			$temp_disk{$1} = 1;
-		}
-	}
-	@list_disks = sort keys (%temp_disk); $total_disks = @list_disks;
+#	$numcores = `grep ^processor  $ARGV[0]/static-* | tail -1 | awk '{print \$3}'`; chomp($numcores);
+#	# detecting active NICs - from ip addr command
+#	my @tempactivenics = `grep inet $ARGV[0]/static-* | grep global | awk '{print \$NF}'`;
+#	for (@tempactivenics) {
+#		chomp;
+#		if (/bond/) {
+#			# i need to make an extra step
+#			$nicextralegend = "(bonded NICs)";
+#			my @bondedinterfaces = `grep master $ARGV[0]/static-* | grep $_ | awk '{print \$2}' | awk -F: '{print \$1}'`;
+#			for (@bondedinterfaces) {
+#				chomp;
+#				$test_nic{$_} = 1;
+#			}
+#
+##		} else {
+#			$test_nic{$_} = 1;
+#		}
+#	}
+#	@activenics = keys (%test_nic); 
+##	$total_nics = @activenics;
+#	#print Dumper(\@activenics);
+#	#
+#	#detecting the list of disks - they must be have "*vg-*" on it
+#	my $dynamicfile = `ls $ARGV[0]/dynamic-*gz | tail -1`; chomp $dynamicfile;
+###	my @temp_list_disks = `zcat $dynamicfile`; my %temp_disk;
+#	for (@temp_list_disks) {
+##		if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+)\s+\d+\.*/){
+#			$temp_disk{$1} = 1;
+#		}
+#	}
+##	@list_disks = sort keys (%temp_disk); $total_disks = @list_disks;
 #	print Dumper(\@list_disks);
-
+#
 	# creating the size of the graph depending of the number of disks - some servers have 200+ disks
-	if ($total_disks < 160) {
-		$verticalsize=600;		
-		$horizontalsize=1200;		
+#	if ($total_disks < 160) {
+#		$verticalsize=600;		
+#		$horizontalsize=1200;		
+#
+#	} else {
+#		$verticalsize=1500;		
+#		$horizontalsize=3000;		
+#	}
+#
+}
 
-	} else {
-		$verticalsize=1500;		
-		$horizontalsize=3000;		
-	}
+sub reading_config {
+	$simple = XML::Simple->new(); 
+	$config_file = $simple->XMLin('./citihpc-analysis.xml'); 
+	print Dumper($config_file);
+}
+
+sub parsing_static {
+
 
 }
 
 
-sub parsing_log {
+sub parsing_dynamic {
 	my @listfiles;
 	@listfiles = `ls $ARGV[0]/dynamic*gz`;
 	open (my $fh, '>', $graphdat) or die "Could not open file '$graphdat' $!";

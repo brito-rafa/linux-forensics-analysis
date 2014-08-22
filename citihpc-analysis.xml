@@ -2,60 +2,137 @@
 <!--citihpc-analysis.xml version="1.0" timestamp="2014-08-21 00:00:00"-->
 <!-- created by Rafael Brito rb36135 CitiHPC -->
 <forensics-config>
+	<!-- The threshold of context switches per second that tool will display a warning -->
 	<contextswitchwarning>5000</contextswitchwarning>
+	<!-- The threshold of cpu idleness that tool will display a warning - it must be below than the configured parameter -->
 	<cpuwarning>1</cpuwarning>
+	<!-- The threshold of disk latency in milliseconds that tool will display a warning - it must be more than the configured parameter -->
 	<disklatencywarning>10</disklatencywarning>
 	<!-- HT should be ... -->
 	<hyperthread>off</hyperthread>
 	<heatmapfilename>citihpc-forensics-heatmap-</heatmapfilename>
 	<ibmbios>
 		<parameter name="IMM.ThermalModePolicy">
-		<value>Performance</value>
+			<value>Performance</value>
 		</parameter>
 		<parameter name="uEFI.TurboModeEnable">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.ProcessorEistEnable">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.ProcessorCcxEnable">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.ProcessorC1eEnable">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.ExecuteDisableBit">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.ProcessorVmxEnable">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.PatrolScrub">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.IdeMode">
-		<value>Native</value>
+			<value>Native</value>
 		</parameter>
 		<parameter name="uEFI.EnergyManager">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.RebootOnNMI">
-		<value>Enable</value>
+			<value>Enable</value>
 		</parameter>
 		<parameter name="uEFI.ForceLegacyVideo">
-		<value>Enable</value>
+			<value>Enable</value>
 		</parameter>
 		<parameter name="uEFI.Rehook19">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.ThunkSupport">
-		<value>Enable</value>
+			<value>Enable</value>
 		</parameter>
 		<parameter name="uEFI.DemandScrub">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.ProcessorHyperThreading">
-		<value>Disable</value>
+			<value>Disable</value>
 		</parameter>
 	</ibmbios>
+	<hpbios>
+		<parameter name="HP_Power_Regulator">
+			<value>HP_Static_High_Performance_Mode</value>
+		</parameter>
+		<parameter name="CPU_Virtualization">
+			<value>Disabled</value>
+		</parameter>
+		<parameter name="Intel_Processor_Turbo_Mode">
+			<value>Disabled</value>
+		</parameter>
+		<parameter name="Intel_VT-d2">
+			<value>Disabled</value>
+		</parameter>
+		<parameter name="HP_Power_Profile">
+			<value>Maximum_Performance</value>
+		</parameter>
+		<parameter name="Intel_QPI_Link_Power_Management">
+			<value>Disabled</value>
+		</parameter>
+		<parameter name="Intel_Minimum_Processor_Idle_Power_State">
+			<value>No_C-States</value>
+		</parameter>
+		<parameter name="Hyperthreading">
+			<value>Disabled</value>
+		</parameter>
+		<parameter name="Memory_Speed_with_2_DIMMs_per_Channel">
+			<value>1333MHz_Maximum</value>
+		</parameter>
+		<parameter name="ASR">
+			<value>Disabled</value>
+		</parameter>
+		<parameter name="Low_Power_Halt_state">
+			<value>Disabled</value>
+		</parameter>
+	</hpbios>
+	<kernel>
+		<parameter name="net.core.netdev_max_backlog">
+			<value>250000</value>
+		</parameter>
+		<parameter name="net.core.optmem_max">
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.core.rmem_max">
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.core.wmem_max">
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.core.rmem_default">
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.core.wmem_default">
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.ipv4.tcp_mem">
+			<value>16777216</value>
+			<value>16777216</value>
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.ipv4.tcp_rmem">
+			<value>4096</value>
+			<value>87380</value>
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.ipv4.tcp_wmem">
+			<value>4096</value>
+			<value>65536</value>
+			<value>16777216</value>
+		</parameter>
+		<parameter name="net.ipv4.ip_local_port_range">
+			<value>32768</value>
+			<value>61000</value>
+		</parameter>
+	</kernel>
 </forensics-config>
