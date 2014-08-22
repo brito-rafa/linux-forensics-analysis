@@ -12,14 +12,15 @@ use XML::Simple;
 my $verbose = 0;
 my $MYDATADIR; my $STATIC; my $FIRSTDYNAMIC; my $LASTDYNAMIC;
 my $timestamp;
+my @term_collector;
 
 my $TODAY; my $NOW;
 
 my $hostnam; 
-my $hypert;
+my $hypert; my $ht;
 my $memtot; my $rhel; my $numcores; my @activenics; my $total_nics; my %test_nic; my @list_disks; my $total_disks;
 my $dateofdata;
-my $simple; my $config_file;
+my $simple; my $config_file; my @staticfile; my $lvm = 0;
 
 my $graphdat; $graphdat = "graph.forensic.dat"; 
 my $graphdatmem; $graphdatmem = "graph.forensic.mem.dat"; 
@@ -61,7 +62,6 @@ sub display_header {
 
 	my $user=`id | awk 'BEGIN { FS="("} { print \$2}' | awk 'BEGIN { FS=")"} {print \$1}'`; chomp($user);
 
-
 	print GREEN, "Info: Starting Citi HPC Low Latency Analysis on $TODAY at $NOW\n", RESET;
 	print GREEN, "Info: User $user is executing the script.\n", RESET;
 
@@ -77,7 +77,7 @@ sub checking_datadir {
 		exit 2;
 	}
 
-	if ($ARGV[1] eq "-v") {
+	if ((exists $ARGV[1]) && ($ARGV[1] eq "-v")) {
 		$verbose=1;
 		print GREEN, "Info: Verbose Mode is ON.\n", RESET;
 	}
@@ -90,7 +90,7 @@ sub checking_datadir {
 		exit 3;
 	} else {
 
-		print GREEN,"Info: Data directory is $MYDATADIR\n",RESET if ($verbose);
+		print BLUE,"Debug: Data directory is $MYDATADIR\n",RESET if ($verbose);
 	}
 
 	my $compress=`ls ${MYDATADIR}/dynamic*gz | wc -l`; chomp ($compress);
@@ -100,7 +100,7 @@ sub checking_datadir {
 		usage;
 		exit 6;
 	} else {
-		print GREEN,"Info: Found $compress dynamic files under $MYDATADIR\n",RESET if ($verbose);
+		print BLUE,"Debug: Found $compress dynamic files under $MYDATADIR\n",RESET if ($verbose);
 	}
 
 	$FIRSTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | head -1 2>/dev/null`; chomp($FIRSTDYNAMIC);
@@ -110,7 +110,7 @@ sub checking_datadir {
 		usage;
 		exit 3;
 	} else {
-		print GREEN,"Info: The first dynamic file found is $FIRSTDYNAMIC\n",RESET if ($verbose);
+		print BLUE,"Debug: The first dynamic file found is $FIRSTDYNAMIC\n",RESET if ($verbose);
 	}
 
 	$LASTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | tail -2 | head -1`; chomp($LASTDYNAMIC);
@@ -120,7 +120,7 @@ sub checking_datadir {
 		usage;
 		exit 3;
 	} else {
-		print GREEN,"Info: The last dynamic file found is $LASTDYNAMIC\n",RESET if ($verbose);
+		print BLUE,"Debug: The last dynamic file found is $LASTDYNAMIC\n",RESET if ($verbose);
 	}
 
 	if ($FIRSTDYNAMIC eq $LASTDYNAMIC) {
@@ -143,77 +143,127 @@ sub gettingbasicinfo {
 		$rhel = "5";
 	}
 
-	print GREEN, "Info: Collector data for hostname $hostnam , RHEL$rhel version\n", RESET;
-
 	# date of collection
 	my $tempdate = `grep CitiHPC  $STATIC | tail -1`; chomp ($tempdate);
 	$dateofdata = "$1/$2/$3" if ($tempdate =~ /on\s(\d\d)(\d\d)(\d\d)\sat/);
-	# finding out if hyperthreading is on or off - useful for the CPU graph
-	# on RHEL5 is difficult to detect hyperthreading because there is no "lscpu"
-	my $tempht = `grep 'per core:' $ARGV[0]/static-* | awk -F: '{print \$2}' | head -1`;
-	if ( $tempht =~ /2/ )  {
-		$hypert = "(Hyperthreading is ON)";
-	} else {
-		if ( $tempht =~ /1/ ) {
-			$hypert = "(Hyperthreading is OFF)";
-		} else {
-			$hypert = "";
-		}
-	}
-	# detecting the number of CPUs
-#	$numcores = `grep ^processor  $ARGV[0]/static-* | tail -1 | awk '{print \$3}'`; chomp($numcores);
-#	# detecting active NICs - from ip addr command
-#	my @tempactivenics = `grep inet $ARGV[0]/static-* | grep global | awk '{print \$NF}'`;
-#	for (@tempactivenics) {
-#		chomp;
-#		if (/bond/) {
-#			# i need to make an extra step
-#			$nicextralegend = "(bonded NICs)";
-#			my @bondedinterfaces = `grep master $ARGV[0]/static-* | grep $_ | awk '{print \$2}' | awk -F: '{print \$1}'`;
-#			for (@bondedinterfaces) {
-#				chomp;
-#				$test_nic{$_} = 1;
-#			}
-#
-##		} else {
-#			$test_nic{$_} = 1;
-#		}
-#	}
-#	@activenics = keys (%test_nic); 
-##	$total_nics = @activenics;
-#	#print Dumper(\@activenics);
-#	#
-#	#detecting the list of disks - they must be have "*vg-*" on it
-#	my $dynamicfile = `ls $ARGV[0]/dynamic-*gz | tail -1`; chomp $dynamicfile;
-###	my @temp_list_disks = `zcat $dynamicfile`; my %temp_disk;
-#	for (@temp_list_disks) {
-##		if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+)\s+\d+\.*/){
-#			$temp_disk{$1} = 1;
-#		}
-#	}
-##	@list_disks = sort keys (%temp_disk); $total_disks = @list_disks;
-#	print Dumper(\@list_disks);
-#
-	# creating the size of the graph depending of the number of disks - some servers have 200+ disks
-#	if ($total_disks < 160) {
-#		$verticalsize=600;		
-#		$horizontalsize=1200;		
-#
-#	} else {
-#		$verticalsize=1500;		
-#		$horizontalsize=3000;		
-#	}
-#
+
+	print GREEN, "Info: Collector data from $dateofdata for hostname $hostnam , RHEL$rhel version\n", RESET;
+
 }
 
 sub reading_config {
 	$simple = XML::Simple->new(); 
 	$config_file = $simple->XMLin('./citihpc-analysis.xml'); 
-	print Dumper($config_file);
+#	print Dumper($config_file);
 }
 
 sub parsing_static {
 
+	my @tempactivenics; my $tempcpucores; my $tempcpusiblings; my @tempmemsize; my @tempmemspeed;
+
+	# will parse the static file and fill a bunch of temp variables for later conditions
+	print BLUE, "Debug: Starting to parse static data\n", RESET if ($verbose);
+	@staticfile = `cat $STATIC`;
+	foreach (@staticfile) {
+		#detecting the number of CPUs
+		$numcores = ($1+1) if (/^processor\s+:\s(\d+)/); 
+
+		# detecting active NICs - from ip addr command - filling a temp array
+		push (@tempactivenics, $1) if (/^\s+inet.*global\s(eth\d|bond\d)/);
+
+		# finding out if hyperthreading is on, cpu cores and simblings must match
+		$tempcpucores = $1 if (/^cpu\scores\s+:\s+(\d+)/);
+		$tempcpusiblings = $1 if (/^siblings\s+:\s+(\d+)/);
+
+		# finding logical volume
+		$lvm = 1 if (/Logical Volume/);	
+
+		push (@tempmemsize, $1) if (/^\s+Size:\s(\d+)\sMB/);
+		push (@tempmemspeed, $1) if (/^\s+Speed:\s(\d+)\sMHz/);
+	}
+
+	# hyperthread check
+	if ( $tempcpucores eq $tempcpusiblings )  {
+		$hypert = "(Hyperthreading is OFF)"; # this if for the graph title
+		$ht="off";
+	} else {
+		$hypert = "(Hyperthreading is ON)"; # this is for the cpu graph title
+		$ht="on";
+	}
+
+	if ($verbose) {
+		print BLUE, "Debug: Checking for presence of Hyper-Threading\n", RESET;
+		print BLUE, "Debug: hyper-threading should be set to $config_file->{hyperthread} , according to the config file\n", RESET;
+		print BLUE, "Debug: Currently, hyper-threading is $ht because server has $tempcpucores cores and $tempcpusiblings siblings\n", RESET;
+	}
+
+	if ($config_file->{hyperthread} ne $ht) {
+		if ($config_file->{hyperthread} eq "off") {
+			push (@term_collector, "Hyper-threading (HT)is enabled. HT is not recommended for low latency due to jitter");
+		} else {
+			push (@term_collector, "Hyper-threading (HT)is not enabled. HT is recommended for grid compute nodes to optimize the use of cores.");
+		}
+	}
+
+	print BLUE, "Debug: Checking for presence of Logical Volume\n", RESET if ($verbose);
+	if (! $lvm) {
+		push (@term_collector, "Logical Volume Manager is not in use. This can indicate that the system is not running the LLP or SOE Build.");
+	}
+	
+	print BLUE, "Debug: Checking uniformity of speed and size of memory\n", RESET if ($verbose);
+	my $arraycounter; my @uniqarray;
+
+	@uniqarray = uniq ( @tempmemsize );
+	$arraycounter = @uniqarray;
+	if ($arraycounter > 1) {
+		print RED, "Warning: Memory Size Not Uniform!\n", RESET if ($verbose);
+		push (@term_collector, "Non uniform memory size has been detected which may lead to unpredictable speed and memory access!\n");
+	} else {
+		print BLUE, "Debug: Memory Size is uniform in $tempmemsize[0] Mb\n", RESET if ($verbose);
+	}
+
+	@uniqarray = uniq ( @tempmemspeed );
+	$arraycounter = @uniqarray;
+	if ($arraycounter > 1) {
+		print RED, "Warning: Memory Speed Not Uniform across memory devices!\n", RESET if ($verbose);
+		push (@term_collector, "Memory Speed is not uniform across the memory devices which may result in performance degradation!\n");
+	} else {
+		print BLUE, "Debug: Memory Speed is uniform in $tempmemspeed[0] MHz\n", RESET if ($verbose);
+	}
+	
+
+	# parsing the activenics
+#	print Dumper (\@tempactivenics);
+	for (@tempactivenics) {
+		chomp;
+		if (/bond/) {
+			# i need to make an extra step - need to improve this code big time, doing another grep
+			my $nicextralegend = "(bonded NICs)";
+			my @bondedinterfaces = `grep master $STATIC | grep $_ | awk '{print \$2}' | awk -F: '{print \$1}'`;
+			for (@bondedinterfaces) {
+				chomp;
+				$test_nic{$_} = 1;
+			}
+
+		} else {
+			$test_nic{$_} = 1;
+		}
+	}
+	@activenics = keys (%test_nic); 
+	$total_nics = @activenics;
+	#print Dumper(\@activenics);
+
+
+	
+	#
+#	#detecting the list of disks - they must be have "*vg-*" on it - this data is only on dynamic
+	my @temp_list_disks = `zcat $LASTDYNAMIC`; my %temp_disk;
+	for (@temp_list_disks) {
+		if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+)\s+\d+\.*/){
+			$temp_disk{$1} = 1;
+		}
+	}
+	@list_disks = sort keys (%temp_disk); $total_disks = @list_disks;
 
 }
 
@@ -368,3 +418,10 @@ sub parsing_dynamic {
 #	print Dumper(\@datarray);
 
 }
+
+# the following return an uniq elements of the array
+sub uniq {
+  my %seen;
+  return grep { !$seen{$_}++ } @_;
+}
+
