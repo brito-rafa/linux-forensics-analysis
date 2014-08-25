@@ -10,7 +10,8 @@ use XML::Simple;
 
 # key variables
 my $verbose = 0;
-my $MYDATADIR; my $STATIC; my $FIRSTDYNAMIC; my $LASTDYNAMIC;
+my $MYDATADIR; my $STATIC; my $FIRSTDYNAMIC; my $LASTDYNAMIC; my $CONREPFILE; my $ASUFILE;
+my $HP = 0; my $IBM = 0;
 my $timestamp;
 my @term_collector;
 
@@ -47,6 +48,12 @@ sub main {
 	&gettingbasicinfo();
 	&reading_config();
 	&parsing_static();
+	# bios checking
+	if ($IBM) {
+#		&checking_asu;
+	} elsif ($HP) {
+#		&checking_conrep;
+	}
 #	&parsing_dynamic();
 
 }
@@ -162,7 +169,12 @@ sub parsing_static {
 
 	my @tempactivenics; my $tempcpucores; my $tempcpusiblings; my @tempmemsize; my @tempmemspeed;
 	my @tempbroadcom; my @tempkernelvalue; my $counter; my $kernelparam;
+	my %nicringbuffers; my $nicring; 
+	my $maximum = 0; my $key;
 	my $arraycounter;
+
+	my $tcpsegmentationoff = 0;
+	my $genericsegmentationoff = 0;
 
 	# will parse the static file and fill a bunch of temp variables for later conditions
 	print BLUE, "Debug: Starting to parse static data\n", RESET if ($verbose);
@@ -180,6 +192,9 @@ sub parsing_static {
 
 		# finding logical volume
 		$lvm = 1 if (/Logical Volume/);	
+
+		$IBM = 1 if (/Vendor:\nIBM/);
+		$HP = 1 if (/Vendor:\nHP/);
 
 		push (@tempmemsize, $1) if (/^\s+Size:\s(\d+)\sMB/);
 		push (@tempmemspeed, $1) if (/^\s+Speed:\s(\d+)\sMHz/);
@@ -200,9 +215,28 @@ sub parsing_static {
 				}
 
 		}
+
+
+		# building a hash for nic ring buffers - the output is tricky because the "Pre-set" and "Current" have the same format
+		$nicring = $1 if (/^Ring\sparameters\sfor\s(eth\d):/);
+		$maximum = 1 if (/^Pre-set\smaximums:/);
+		$maximum = 0 if (/^Current\shardware\ssettings:/);
+		if ($maximum) {
+			$nicringbuffers{$nicring}{rxmax} = $1 if (/^RX:\s+(\d+)\n/);
+			$nicringbuffers{$nicring}{txmax} = $1 if (/^TX:\s+(\d+)\n/);
+
+		} else {
+			$nicringbuffers{$nicring}{rxcurrent} = $1 if (/^RX:\s+(\d+)\n/);
+			$nicringbuffers{$nicring}{txcurrent} = $1 if (/^TX:\s+(\d+)\n/);
+
+		}
+		
+		$tcpsegmentationoff = 1 if (/^tcp-segmentation-offload:\s+off/);
+		$genericsegmentationoff = 1 if (/^generic-segmentation-offload:\s+off/);
 	}
 
-	#print Dumper (\%tempkernelparam);
+	#print Dumper (\%actualkernelparam);
+#	print Dumper (\%nicringbuffers);
 
 	# hyperthread check
 	if ( $tempcpucores eq $tempcpusiblings )  {
@@ -216,7 +250,7 @@ sub parsing_static {
 	if ($verbose) {
 		print BLUE, "Debug: Checking for presence of Hyper-Threading\n", RESET;
 		print BLUE, "Debug: hyper-threading should be set to $config_file->{hyperthread} , according to the config file\n", RESET;
-		print BLUE, "Debug: Currently, hyper-threading is $ht because server has $tempcpucores cores and $tempcpusiblings siblings\n", RESET;
+		print BLUE, "Debug: Currently, hyper-threading is $ht on system because server has $tempcpucores cores and $tempcpusiblings siblings\n", RESET;
 	}
 
 	if ($config_file->{hyperthread} ne $ht) {
@@ -282,6 +316,30 @@ sub parsing_static {
 			print RED, "Warning: Broadcom NIC detected for interface $_. Not a Recommended Vendor\n", RESET if ($verbose);
 			push (@term_collector, "Broadcom NIC has been detected in use on the system for interface $_.Not a favoured vendor!\n");
 		}
+	}
+
+	# Checking ring buffers
+	print BLUE, "Debug: Checking Ring Buffer Sizes...\n", RESET if ($verbose); 
+	foreach $key (sort keys (%nicringbuffers)) {
+		if ($nicringbuffers{$key}{rxmax} ne $nicringbuffers{$key}{rxcurrent}) {
+			print RED, "Warning: Check RX Ring Buffer settings for interface $key. Current Settings: $nicringbuffers{$key}{rxcurrent}. Maximum Settings: $nicringbuffers{$key}{rxmax}\n", RESET if ($verbose);
+			push (@term_collector, "The receive ring buffer is not set to the maximum. This can lead to packet drops!\n");
+		}
+		if ($nicringbuffers{$key}{txmax} ne $nicringbuffers{$key}{txcurrent}) {
+			print RED, "Warning: Check TX Ring Buffer settings for interface $key. Current Settings: $nicringbuffers{$key}{txcurrent}. Maximum Settings: $nicringbuffers{$key}{txmax}\n", RESET if ($verbose);
+			push (@term_collector, "The transmit ring buffer is not set to the maximum. This can lead to packet drops!\n");
+		}
+
+	}
+
+	if ($tcpsegmentationoff) {
+		print RED, "Warning: TCP Segmentation Offload is Off.\n", RESET if ($verbose);
+		push (@term_collector, "TCP Segmentation Offload is disabled which can lead to higher CPU utilization\n");
+	}
+
+	if ($genericsegmentationoff) {
+		print RED, "Warning: Generic Segmentation Offload is Off.\n", RESET if ($verbose);
+		push (@term_collector, "Generic Segmentation Offload is disabled which can lead to higher CPU utilization\n");
 	}
 
 	&checking_kernel;
