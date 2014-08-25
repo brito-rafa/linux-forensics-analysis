@@ -10,7 +10,7 @@ use XML::Simple;
 
 # key variables
 my $verbose = 0;
-my $MYDATADIR; my $STATIC; my $FIRSTDYNAMIC; my $LASTDYNAMIC; my $CONREPFILE; my $ASUFILE;
+my $MYDATADIR; my $STATIC; my $FIRSTDYNAMIC; my $LASTDYNAMIC; my $CONREP; my $ASU;
 my $HP = 0; my $IBM = 0;
 my $timestamp;
 my @term_collector;
@@ -22,6 +22,7 @@ my $hypert; my $ht;
 my $memtot; my $rhel; my $numcores; my @activenics; my $total_nics; my %test_nic; my @list_disks; my $total_disks;
 my $dateofdata;
 my $simple; my $config_file; my @staticfile; my $lvm = 0;
+my $conrep_simple; my $conrep_config;
 
 my $graphdat; $graphdat = "graph.forensic.dat"; 
 my $graphdatmem; $graphdatmem = "graph.forensic.mem.dat"; 
@@ -51,8 +52,9 @@ sub main {
 	# bios checking
 	if ($IBM) {
 #		&checking_asu;
-	} elsif ($HP) {
-#		&checking_conrep;
+	}
+	if ($HP) {
+		&checking_conrep();
 	}
 #	&parsing_dynamic();
 
@@ -193,8 +195,9 @@ sub parsing_static {
 		# finding logical volume
 		$lvm = 1 if (/Logical Volume/);	
 
-		$IBM = 1 if (/Vendor:\nIBM/);
-		$HP = 1 if (/Vendor:\nHP/);
+		$IBM = 1 if (/Vendor:\sIBM/);
+
+		$HP = 1 if (/Vendor:\sHP/);
 
 		push (@tempmemsize, $1) if (/^\s+Size:\s(\d+)\sMB/);
 		push (@tempmemspeed, $1) if (/^\s+Speed:\s(\d+)\sMHz/);
@@ -394,6 +397,41 @@ sub checking_kernel {
 		 push (@term_collector, "Kernel Parameters are not finely tuned for low latency or intense compute application!\n");
 
 	}
+}
+
+#sub checking_asu {
+
+
+#}
+
+sub checking_conrep {
+	$CONREP=`ls ${MYDATADIR}/conrep* 2>/dev/null | head -1 2>/dev/null`; chomp($CONREP);
+	if ( -f $CONREP) {
+		$conrep_simple = XML::Simple->new(); 
+		$conrep_config = $conrep_simple->XMLin($CONREP);
+#		print Dumper ($conrep_config); 
+		my $key;
+		my $notmatch = 0;
+		my $globalnotmatch = 0;
+		print BLUE, "Debug: Checking for conrep Parameters.\n", RESET if ($verbose);
+		foreach $key (sort (keys %{$config_file->{hpbios}{parameter}})) {
+			print BLUE, "Debug: checking $key ... \n", RESET if ($verbose);
+			if (exists $conrep_config->{Section}{$key}) {
+				if ($config_file->{hpbios}{parameter}{$key}{value} ne $conrep_config->{Section}{$key}{content}) {
+						print RED, "Warning: Conrep parameter mismatch for $key. Value detected: $conrep_config->{Section}{$key}{content}. Actual Value Expected: $config_file->{hpbios}{parameter}{$key}{value}\n", RESET if ($verbose);
+						$globalnotmatch = 1;
+				}
+			} else {
+				print RED, "Warning: conrep parameter $key does not exist on the system. Check forensics config file or the Conrep release for the parameter!\n", RESET;
+			}
+		}
+		if ($globalnotmatch) {
+			push (@term_collector, "BIOS settings are not optimized for low latency or intense compute application!\n");
+		}
+	} else {
+               print RED, "Warning: Could not find conrep file on $MYDATADIR data directory!\n", RESET if ($verbose);
+	}
+
 }
 
 
