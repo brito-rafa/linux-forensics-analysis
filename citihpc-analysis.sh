@@ -46,6 +46,15 @@ if [ ! -f "$STATIC" ]; then
         exit 3
 fi
 
+# Checking for presence of Virtual Machines
+
+if grep -q "hypervisor" $STATIC; then
+	echo -e "${red} Error: Virtual Machine presence detected. ${NC}"
+	exit 8
+fi 
+
+
+# Checking whether .tar file was extracted properly or not
 tar_check=`pwd`
 
 list=`ls  $tar_check`
