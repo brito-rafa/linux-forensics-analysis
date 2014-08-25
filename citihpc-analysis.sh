@@ -46,6 +46,44 @@ if [ ! -f "$STATIC" ]; then
         exit 3
 fi
 
+tar_check=`pwd`
+
+list=`ls  $tar_check`
+#echo $list
+
+tar_cnt=0
+tar_ch=()
+for i in $list; do
+        tar_ch[tar_cnt]=`echo $i`
+        let tar_cnt=tar_cnt+1
+done
+file_counter=0
+for ((i=0;i<${#tar_ch[@]};i++)) do
+        if [[ "${tar_ch[i]}" == "logo-citihpc.png" ]]; then
+                let file_counter=file_counter+1
+        elif [[ "${tar_ch[i]}" == "README.md" ]]; then
+                let file_counter=file_counter+1
+        elif [[ "${tar_ch[i]}" == "kernel.config" ]]; then
+                let file_counter=file_counter+1
+        elif [[ "${tar_ch[i]}" == "ibm-asu.config" ]]; then
+                let file_counter=file_counter+1
+        elif [[ "${tar_ch[i]}" == "hp-conrep.config" ]]; then
+                let file_counter=file_counter+1
+        elif [[ "${tar_ch[i]}" == "genheatmaps.pl" ]]; then
+                let file_counter=file_counter+1
+        elif [[ "${tar_ch[i]}" == "citihpc-analysis.sh" ]]; then
+                let file_counter=file_counter+1
+        fi
+
+#               echo ${tar_ch[i]}
+done
+#echo $file_counter
+
+if [ "$file_counter" -ne "7" ]; then
+        echo -e "${red} Error: Tar File was not extracted properly ${NC}"
+        exit 7
+fi
+
 sysinfo=`grep -A1 "Info: uname -a" $STATIC | sed -n '2,2p'`
 echo -e "${green} Info: Starting Citi HPC Low Latency Analysis on $TODAY at $NOW ${NC}"
 echo -e "${green} Info: System Specifications: $sysinfo"
