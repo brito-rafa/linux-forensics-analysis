@@ -37,7 +37,7 @@
 			<value>Disable</value>
 		</parameter>
 		<parameter name="uEFI.IdeMode">
-			<value>Native</value>
+			<value>Native mode</value>
 		</parameter>
 		<parameter name="uEFI.EnergyManager">
 			<value>Disable</value>

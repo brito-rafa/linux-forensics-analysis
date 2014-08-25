@@ -32,7 +32,7 @@ my $graphdatdiskcpu; $graphdatdiskcpu = "graph.forensic.disk.cpu.dat";
 my $graphdatdiskread; $graphdatdiskread = "graph.forensic.disk.read.dat"; 
 my $graphdatdiskwrite; $graphdatdiskwrite = "graph.forensic.disk.write.dat"; 
  
-my %actualkernelparam;
+my %actualkernelparam; my %actualasuparam;
 
 
 # Finally executing the code
@@ -51,7 +51,7 @@ sub main {
 	&parsing_static();
 	# bios checking
 	if ($IBM) {
-#		&checking_asu;
+		&checking_asu;
 	}
 	if ($HP) {
 		&checking_conrep();
@@ -170,7 +170,7 @@ sub reading_config {
 sub parsing_static {
 
 	my @tempactivenics; my $tempcpucores; my $tempcpusiblings; my @tempmemsize; my @tempmemspeed;
-	my @tempbroadcom; my @tempkernelvalue; my $counter; my $kernelparam;
+	my @tempbroadcom; my @tempkernelvalue; my $counter; my $kernelparam; my $asuparam;
 	my %nicringbuffers; my $nicring; 
 	my $maximum = 0; my $key;
 	my $arraycounter;
@@ -219,6 +219,14 @@ sub parsing_static {
 
 		}
 
+		# IBM ASU paramters (when present)
+
+		if (/^(IMM|SYSTEM_PROD_DATA|BootOrder|iSCSI|PXE|uEFI\.)(.*)=(.*)\n/) {
+			# sometimes the kernel value can be multiple numbers or words
+			$asuparam = "$1"."$2";
+			$actualasuparam{$asuparam} = $3;
+
+		}
 
 		# building a hash for nic ring buffers - the output is tricky because the "Pre-set" and "Current" have the same format
 		$nicring = $1 if (/^Ring\sparameters\sfor\s(eth\d):/);
@@ -399,10 +407,32 @@ sub checking_kernel {
 	}
 }
 
-#sub checking_asu {
+sub checking_asu {
+	print BLUE, "Debug: Checking for asu (IBM BIOS) parameters if exists.\n", RESET if ($verbose);
+	my $arraysize; my @asuparameters; my $globalnotmatch = 0; my $found_asu_parameters; my $key;
+	$found_asu_parameters = keys(%actualasuparam);
+	if ($found_asu_parameters < 4) {
+		print RED, "Warning: No ASU parameters found on static file.\n", RESET if ($verbose);
+		return 2;
+	}
+	
+	foreach $key (sort (keys %{$config_file->{ibmbios}{parameter}})) {
+	#	print BLUE, "Debug: checking $key ... \n", RESET if ($verbose);
+		if (exists $actualasuparam{$key}) {
+#			print BLUE, "Debug: $key has reference value of $config_file->{kernel}{parameter}{$key}{value} \n", RESET if ($verbose);
+			if ($config_file->{ibmbios}{parameter}{$key}{value} ne $actualasuparam{$key}) {
+				print RED, "Warning: Parameter mismatch for $key. Value detected: $actualasuparam{$key}. Actual Value Expected:  $config_file->{ibmbios}{parameter}{$key}{value}\n", RESET if ($verbose);
+				$globalnotmatch = 1;
+			}
+		} else {
+			print RED, "Warning: asu parameter $key does not exist on the system. Check forensics config file or the IBM BIOS release for the parameter!\n", RESET;
+		}
+	}
+	if ($globalnotmatch) {
+		push (@term_collector, "BIOS settings are not optimized for low latency or intense compute application!\n");
+	}
 
-
-#}
+}
 
 sub checking_conrep {
 	$CONREP=`ls ${MYDATADIR}/conrep* 2>/dev/null | head -1 2>/dev/null`; chomp($CONREP);
