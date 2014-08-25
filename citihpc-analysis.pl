@@ -30,6 +30,7 @@ my $graphdatdiskcpu; $graphdatdiskcpu = "graph.forensic.disk.cpu.dat";
 my $graphdatdiskread; $graphdatdiskread = "graph.forensic.disk.read.dat"; 
 my $graphdatdiskwrite; $graphdatdiskwrite = "graph.forensic.disk.write.dat"; 
  
+my %actualkernelparam;
 
 
 # Finally executing the code
@@ -154,13 +155,13 @@ sub gettingbasicinfo {
 sub reading_config {
 	$simple = XML::Simple->new(); 
 	$config_file = $simple->XMLin('./citihpc-analysis.xml'); 
-	#print Dumper($config_file);
+#	print Dumper($config_file);
 }
 
 sub parsing_static {
 
 	my @tempactivenics; my $tempcpucores; my $tempcpusiblings; my @tempmemsize; my @tempmemspeed;
-	my @tempbroadcom; my %tempkernelparam; my @tempkernelvalue; my $counter; my $kernelparam;
+	my @tempbroadcom; my @tempkernelvalue; my $counter; my $kernelparam;
 	my $arraycounter;
 
 	# will parse the static file and fill a bunch of temp variables for later conditions
@@ -187,21 +188,21 @@ sub parsing_static {
 
 
 		# building a hash for kernel paramters
-		if (/^(kernel|vm|fs|dev|net|abi|crypto|sunrpc\.)(.*)\s=\s(.*)/) {
+		if (/^(kernel|vm|fs|dev|net|abi|crypto|sunrpc\.)(.*)\s=\s(.*)\n/) {
 			# sometimes the kernel value can be multiple numbers or words
 			@tempkernelvalue = split (/\s+/, $3);
 			$kernelparam = "$1"."$2";
 			# if the values are indeed an array, treat as such
 				$counter = 0;
 				foreach (@tempkernelvalue) {
-					$tempkernelparam{$kernelparam}[$counter] = $_;
+					$actualkernelparam{$kernelparam}[$counter] = "$_";
 					$counter++;
 				}
 
 		}
 	}
 
-	print Dumper (\%tempkernelparam);
+	#print Dumper (\%tempkernelparam);
 
 	# hyperthread check
 	if ( $tempcpucores eq $tempcpusiblings )  {
@@ -283,7 +284,7 @@ sub parsing_static {
 		}
 	}
 
-#	&checking_kernel;
+	&checking_kernel;
 	
 	#
 #	#detecting the list of disks - they must be have "*vg-*" on it - this data is only on dynamic
@@ -295,6 +296,46 @@ sub parsing_static {
 	}
 	@list_disks = sort keys (%temp_disk); $total_disks = @list_disks;
 
+}
+
+sub checking_kernel {
+	my $key, my $arraysize; my $counter;
+	my $notmatch = 0;
+	my $globalnotmatch = 0;
+	print BLUE, "Debug:  Checking for sysctl (kernel) Parameters.\n", RESET if ($verbose);
+	foreach $key (sort (keys %{$config_file->{kernel}{parameter}})) {
+	#	print BLUE, "Debug: checking $key ... \n", RESET if ($verbose);
+		if (exists $actualkernelparam{$key}) {
+			# check if the paramer is multi value
+			if (ref $config_file->{kernel}{parameter}{$key}{value} eq 'ARRAY') {
+				#print BLUE, "Debug: $key has multi values : @{$config_file->{kernel}{parameter}{$key}{value}} \n", RESET if ($verbose);
+				$arraysize = @{$config_file->{kernel}{parameter}{$key}{value}};
+				for ($counter = 0; $counter < $arraysize; $counter++) {
+					if ($config_file->{kernel}{parameter}{$key}{value}[$counter] ne $actualkernelparam{$key}[$counter]) {
+						$notmatch = 1;
+						$globalnotmatch = 1;
+					}
+				}
+				if ($notmatch) {
+					print RED, "Warning: Parameter mismatch for $key. Value detected: @{$actualkernelparam{$key}}. Actual Value Expected @{$config_file->{kernel}{parameter}{$key}{value}}\n", RESET if ($verbose);
+				}
+			} else {
+				# it is a single value parameter
+	#			print BLUE, "Debug: $key has reference value of $config_file->{kernel}{parameter}{$key}{value} \n", RESET if ($verbose);
+				if ($config_file->{kernel}{parameter}{$key}{value} ne $actualkernelparam{$key}[0]) {
+					print RED, "Warning: Parameter mismatch for $key. Value detected: $actualkernelparam{$key}[0]. Actual Value Expected:  $config_file->{kernel}{parameter}{$key}{value}\n", RESET if ($verbose);
+					$globalnotmatch = 1;
+				}
+			}
+		} else {
+			print RED, "Warning: kernel parameter $key does not exist on the system. Check forensics config file or the RHEL release for the parameter!\n", RESET;
+		}
+		$notmatch = 0;
+	}
+	if ($globalnotmatch) {
+		 push (@term_collector, "Kernel Parameters are not finely tuned for low latency or intense compute application!\n");
+
+	}
 }
 
 
