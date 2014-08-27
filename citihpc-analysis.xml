@@ -8,6 +8,8 @@
 	<cpuwarning>1</cpuwarning>
 	<!-- The threshold of disk latency in milliseconds that tool will display a warning - it must be more than the configured parameter -->
 	<disklatencywarning>10</disklatencywarning>
+	<!-- The threshold of cpu utilization for disk operations -->
+	<highcpudiskwarning>80</highcpudiskwarning>
 	<!-- HT should be ... -->
 	<hyperthread>off</hyperthread>
 	<heatmapfilename>citihpc-forensics-heatmap-</heatmapfilename>

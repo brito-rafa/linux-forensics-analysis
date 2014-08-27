@@ -20,7 +20,7 @@ my $TODAY; my $NOW;
 
 my $hostnam; 
 my $hypert; my $ht;
-my $memtot; my $rhel; my $numcores; my @activenics; my $total_nics; my %test_nic; my @list_disks; my $total_disks;
+my $memtot; my $rhel; my $rhelminor; my $rhelcomplete;  my $numcores; my @activenics; my $total_nics; my %test_nic; my @list_disks; my $total_disks;
 my $dateofdata;
 my $simple; my $config_file; my @staticfile; my $lvm = 0;
 my $conrep_simple; my $conrep_config;
@@ -59,6 +59,7 @@ sub main {
 	}
 	&compare_first_last_dynamic();
 	&parsing_all_dynamic();
+	&printing_analysismessages();
 
 }
 
@@ -102,7 +103,7 @@ sub checking_datadir {
 		exit 3;
 	} else {
 
-		print BLUE,"Debug: Data directory is $MYDATADIR\n",RESET if ($verbose);
+		print GREEN,"Info: Data directory is $MYDATADIR\n",RESET if ($verbose);
 	}
 
 	@LISTALLDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null`;
@@ -113,7 +114,7 @@ sub checking_datadir {
 		usage;
 		exit 6;
 	} else {
-		print BLUE,"Debug: Found $compress dynamic files under $MYDATADIR\n",RESET if ($verbose);
+		print GREEN,"Info: Found $compress dynamic files under $MYDATADIR\n",RESET if ($verbose);
 	}
 
 	$FIRSTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | head -1 2>/dev/null`; chomp($FIRSTDYNAMIC);
@@ -123,7 +124,7 @@ sub checking_datadir {
 		usage;
 		exit 3;
 	} else {
-		print BLUE,"Debug: The first dynamic file found is $FIRSTDYNAMIC\n",RESET if ($verbose);
+		print GREEN,"Info: The first dynamic file found is $FIRSTDYNAMIC\n",RESET if ($verbose);
 	}
 
 	$LASTDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null | tail -2 | head -1`; chomp($LASTDYNAMIC);
@@ -133,7 +134,7 @@ sub checking_datadir {
 		usage;
 		exit 3;
 	} else {
-		print BLUE,"Debug: The last dynamic file found is $LASTDYNAMIC\n",RESET if ($verbose);
+		print GREEN,"Info: The last dynamic file found is $LASTDYNAMIC\n",RESET if ($verbose);
 	}
 
 	if ($FIRSTDYNAMIC eq $LASTDYNAMIC) {
@@ -150,17 +151,17 @@ sub gettingbasicinfo {
 	# finding rhel release
 	my $rhelrelease = `grep ^"Red Hat Enterprise" $STATIC | head -1`;
 
-	if ($rhelrelease =~ /^Red\sHat.*\s6\.\d?/) {
-		$rhel = "6";
-	} else {
-		$rhel = "5";
+	if ($rhelrelease =~ /^Red\sHat.*\srelease\s(\d)\.(\d)\s+\(.*/) {
+		$rhel = $1;
+		$rhelminor = $2;
+		$rhelcomplete = "$rhel.$rhelminor";
 	}
 
 	# date of collection
 	my $tempdate = `grep CitiHPC  $STATIC | tail -1`; chomp ($tempdate);
 	$dateofdata = "$1/$2/$3" if ($tempdate =~ /on\s(\d\d)(\d\d)(\d\d)\sat/);
 
-	print GREEN, "Info: Collector data from $dateofdata for hostname $hostnam , RHEL$rhel version\n", RESET;
+	print GREEN, "Info: Collector data from $dateofdata for hostname $hostnam RHEL $rhelcomplete\n", RESET;
 
 }
 
@@ -196,7 +197,7 @@ sub parsing_static {
 		$tempcpusiblings = $1 if (/^siblings\s+:\s+(\d+)/);
 
 		# finding logical volume
-		$lvm = 1 if (/Logical Volume/);	
+		$lvm = 1 if (/Logical\s[vV]olume/);	
 
 		$IBM = 1 if (/Vendor:\sIBM/);
 
@@ -287,7 +288,7 @@ sub parsing_static {
 	$arraycounter = @uniqarray;
 	if ($arraycounter > 1) {
 		print RED, "Warning: Memory Size Not Uniform!\n", RESET if ($verbose);
-		push (@term_collector, "Non uniform memory size has been detected which may lead to unpredictable speed and memory access!\n");
+		push (@term_collector, "Non uniform memory size has been detected which may lead to unpredictable speed and memory access.");
 	} else {
 		print BLUE, "Debug: Memory Size is uniform in $tempmemsize[0] Mb\n", RESET if ($verbose);
 	}
@@ -296,7 +297,7 @@ sub parsing_static {
 	$arraycounter = @uniqarray;
 	if ($arraycounter > 1) {
 		print RED, "Warning: Memory Speed Not Uniform across memory devices!\n", RESET if ($verbose);
-		push (@term_collector, "Memory Speed is not uniform across the memory devices which may result in performance degradation!\n");
+		push (@term_collector, "Memory Speed is not uniform across the memory devices which may result in performance degradation.");
 	} else {
 		print BLUE, "Debug: Memory Speed is uniform in $tempmemspeed[0] MHz\n", RESET if ($verbose);
 	}
@@ -328,7 +329,7 @@ sub parsing_static {
 	foreach (@tempbroadcom) {
 		if (exists $test_nic{$_}) {
 			print RED, "Warning: Broadcom NIC detected for interface $_. Not a Recommended Vendor\n", RESET if ($verbose);
-			push (@term_collector, "Broadcom NIC has been detected in use on the system for interface $_.Not a favoured vendor!\n");
+			push (@term_collector, "Broadcom NIC has been detected in use on the system for interface $_. Not a favoured vendor!");
 		}
 	}
 
@@ -337,23 +338,23 @@ sub parsing_static {
 	foreach $key (sort keys (%nicringbuffers)) {
 		if ($nicringbuffers{$key}{rxmax} ne $nicringbuffers{$key}{rxcurrent}) {
 			print RED, "Warning: Check RX Ring Buffer settings for interface $key. Current Settings: $nicringbuffers{$key}{rxcurrent}. Maximum Settings: $nicringbuffers{$key}{rxmax}\n", RESET if ($verbose);
-			push (@term_collector, "The receive ring buffer is not set to the maximum. This can lead to packet drops!\n");
+			push (@term_collector, "The receive ring buffer is not set to the maximum. This can lead to packet drops!");
 		}
 		if ($nicringbuffers{$key}{txmax} ne $nicringbuffers{$key}{txcurrent}) {
 			print RED, "Warning: Check TX Ring Buffer settings for interface $key. Current Settings: $nicringbuffers{$key}{txcurrent}. Maximum Settings: $nicringbuffers{$key}{txmax}\n", RESET if ($verbose);
-			push (@term_collector, "The transmit ring buffer is not set to the maximum. This can lead to packet drops!\n");
+			push (@term_collector, "The transmit ring buffer is not set to the maximum. This can lead to packet drops!");
 		}
 
 	}
 
 	if ($tcpsegmentationoff) {
 		print RED, "Warning: TCP Segmentation Offload is Off.\n", RESET if ($verbose);
-		push (@term_collector, "TCP Segmentation Offload is disabled which can lead to higher CPU utilization\n");
+		push (@term_collector, "TCP Segmentation Offload is disabled which can lead to higher CPU utilization.");
 	}
 
 	if ($genericsegmentationoff) {
 		print RED, "Warning: Generic Segmentation Offload is Off.\n", RESET if ($verbose);
-		push (@term_collector, "Generic Segmentation Offload is disabled which can lead to higher CPU utilization\n");
+		push (@term_collector, "Generic Segmentation Offload is disabled which can lead to higher CPU utilization.");
 	}
 
 	&checking_kernel;
@@ -405,7 +406,7 @@ sub checking_kernel {
 		$notmatch = 0;
 	}
 	if ($globalnotmatch) {
-		 push (@term_collector, "Kernel Parameters are not finely tuned for low latency or intense compute application!\n");
+		 push (@term_collector, "Kernel Parameters are not finely tuned for low latency or intense compute application!");
 
 	}
 }
@@ -432,7 +433,7 @@ sub checking_asu {
 		}
 	}
 	if ($globalnotmatch) {
-		push (@term_collector, "BIOS settings are not optimized for low latency or intense compute application!\n");
+		push (@term_collector, "BIOS settings are not optimized for low latency or intense compute application!");
 	}
 
 }
@@ -459,7 +460,7 @@ sub checking_conrep {
 			}
 		}
 		if ($globalnotmatch) {
-			push (@term_collector, "BIOS settings are not optimized for low latency or intense compute application!\n");
+			push (@term_collector, "BIOS settings are not optimized for low latency or intense compute application!");
 		}
 	} else {
                print RED, "Warning: Could not find conrep file on $MYDATADIR data directory!\n", RESET if ($verbose);
@@ -469,6 +470,7 @@ sub checking_conrep {
 
 sub compare_first_last_dynamic {
 
+	print BLUE, "Debug: Starting to parse dynamic data - network metrics\n", RESET if ($verbose);
 	my $key; my $nic; my $nicmetric; my $diff;
 	%first_dynamic = load_dynamic_data($FIRSTDYNAMIC);
 	#print Dumper (\%first_dynamic);
@@ -483,7 +485,7 @@ sub compare_first_last_dynamic {
 					$diff = $last_dynamic{interface}{$nic}{$nicmetric} - $first_dynamic{interface}{$nic}{$nicmetric};
 					if ($diff > 0) {
 						print RED, "Warning: $nic parameter $nicmetric detected with a difference of $diff\n", RESET if ($verbose);
-						push (@term_collector, "NIC $nic metrics which may indicate network degradation!\n");
+						push (@term_collector, "NIC $nic metrics which may indicate network degradation.");
 					}
 				}
 			} 
@@ -495,7 +497,7 @@ sub compare_first_last_dynamic {
 		$diff = $last_dynamic{$key} - $first_dynamic{$key};
 		if ($diff > 0) {
 			print RED, "Warning: $key parameter detected with a difference of $diff\n", RESET if ($verbose);
-			push (@term_collector, "$key has been detected which may indicate network degradation!\n");
+			push (@term_collector, "$key has been detected which may indicate network degradation.");
 		}
 
 	}	
@@ -516,8 +518,12 @@ sub load_dynamic_data(\%$)  {
 		$dynamic_data{"UDP Buffer Overflows"} = $1 if (/\s+(\d+)\s+packet\sreceive\serrors\n/);	
 		$dynamic_data{"TCP data loss"} = $1 if (/\s+(\d+)\s+TCP\sdata\sloss\sevents\n/);	
 		$dynamic_data{"Socket Buffer Overruns"} = $1 if (/\s+(\d+)\s+packets\spruned\sfrom\sreceive\squeue\sbecause\sof\ssocket\sbuffer\soverrun\n/);
-		$dynamic_data{"TCP timeouts"} = $1 if (/\s+(\d+)\s+other\sTCP\stimeouts\n/);
+		$dynamic_data{"TCP Timeouts"} = $1 if (/\s+(\d+)\s+other\sTCP\stimeouts\n/);
 		$dynamic_data{"Connections Aborted Due to Timeout"} = $1 if (/\s+(\d+)\s+connections\saborted\sdue\s\to\stimeout\n/);
+		$dynamic_data{"TCP Packets Collapsed"} = $1 if (/\s+(\d+)\s+packets\scollapsed.*\n/);
+		$dynamic_data{"TCP Packets Rejected"} = $1 if (/\s+(\d+)\s+packets\srejects.*\n/);
+		$dynamic_data{"IP Outgoing Packets Dropped"} = $1 if (/\s+(\d+)\s+outgoing\spackets\sdropped\n/);
+		$dynamic_data{"ICMP Message Failure"} = $1 if (/\s+(\d+)\s+.*ICMP\smessage\sfailed\n/);
 
 		if (/^(eth\d|bond\d)\s+Link\sencap:Ethernet/) {
 			$nicifconfig = $1;
@@ -533,24 +539,25 @@ sub load_dynamic_data(\%$)  {
 			$nicethtool = $1 ;
 			next;
 		}
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_error_bytes):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_mac_errors):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_carrier_errors):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_crc_errors):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_align_errors):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_single_collisions):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_multi_collisions):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_deferred):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_excess_collisions):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_late_collisions):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_total_collisions):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_fragments):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_jabbers):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_undersize_packets):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_oversize_packets):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_ftq_discards):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_discards):\s+(\d+)\n/);
-			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_fw_discards):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_error_bytes):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*errors.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*collisions.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*deferred.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*fragments.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*jabbers.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*undersize.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*too_small.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*too_short.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*too_long.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*too_many.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*oversize.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*overflow.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*discards.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*fail.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*drop.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*stops.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(be_on_die.*):\s+(\d+)\n/);
+		$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(.*errs.*):\s+(\d+)\n/);
 	}
 	#print Dumper (\%dynamic_data);
 	return %dynamic_data;
@@ -559,6 +566,7 @@ sub load_dynamic_data(\%$)  {
 
 sub parsing_all_dynamic {
 
+	print BLUE, "Debug: Starting to parse all dynamic data \n", RESET if ($verbose);
 	$graphdat = "$config_file->{heatmapfilename}$hostnam-cpu.dat"; 
 	$graphdatmem = "$config_file->{heatmapfilename}$hostnam-mem.dat"; 
 	$graphdatnic = "$config_file->{heatmapfilename}$hostnam-nic.dat"; 
@@ -569,6 +577,7 @@ sub parsing_all_dynamic {
 	
 	my $cpucounter = 0;
 	my $diskcounter = 0;
+	my $highcpudiskcounter = 0;
 	my $swapcounter = 0;
 	my $contextcounter = 0;
  
@@ -609,13 +618,22 @@ sub parsing_all_dynamic {
 					$entry++;
 					if ($entry <= ($numcores+2)) {
 						push (@datarray, sprintf("%.2f",100-$7));
+						# setup a counter for CPU high utilization
+						if ($7 <= $config_file->{cpuwarning}) {
+							$cpucounter++;
+						}
 					}
+
 					next;
 				}
 			} else {
 				if (/^Average:\s+(all|\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/){
 					# $10 is CPU idle - grpah is utilization, hence a little subtraction from "100"
 					push (@datarray, sprintf("%.2f",100-$10));
+					# setup a counter for CPU high utilization
+					if ($10 <= $config_file->{cpuwarning}) {
+						$cpucounter++;
+					}
 					next;
 				}
 
@@ -639,6 +657,14 @@ sub parsing_all_dynamic {
 				push (@datarraymem,  sprintf("%.2f", $2/1024/1024));
 				push (@datarraymem,  sprintf("%.2f", $6/1024/1024));
 				push (@datarraymem,  sprintf("%.2f", $4/1024/1024));
+			}
+			if (/^Swap:\s+\d+\s+(\d+)\s+\d+\n/){
+				if ($1 > 0) {
+					$swapcounter++;
+					push (@datarraymem,  sprintf("%.2f", $1/1024/1024));
+				} else {
+					push (@datarraymem,  sprintf("%.2f", $1));
+				}
 			}
 			# NIC data
 			if (/^Average:\s+(eth\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/){
@@ -679,6 +705,20 @@ sub parsing_all_dynamic {
 				$temp_disk{$1}{cpu} = $9;
 				$temp_disk{$1}{read} = $3/2048;
 				$temp_disk{$1}{write} = $4/2048;
+
+				if ($7 > $config_file->{disklatencywarning}) {
+					$diskcounter++;
+				}
+				if ($9 > $config_file->{highcpudiskwarning}) {
+					$highcpudiskcounter++;
+				}
+			}
+
+			# counter for context switing
+			if (/^Average:\s+\d+\.\d+\s+([1-9]\d+\.\d+)\n/) {
+				if ($1 > $config_file->{contextswitchwarning}) {
+					$contextcounter++;
+				}
 			}
 				
 		}
@@ -716,7 +756,31 @@ sub parsing_all_dynamic {
 	close $fhdiskread;
 	close $fhdiskwrite;
 
-#	print Dumper(\@datarray);
+	if ($cpucounter > 0) {
+		print RED, "Warning: CPU idleness less than the threshold of $config_file->{cpuwarning} for $cpucounter times\n", RESET if ($verbose);
+		push (@term_collector, "High CPU Utilization detected.");
+
+	}
+	if ($diskcounter > 0) {
+		print RED, "Warning: Disk latency more than the threshold of $config_file->{disklatencywarning} for $diskcounter times\n", RESET if ($verbose);
+		push (@term_collector, "Excessive disk latency detected.");
+
+	}
+	if ($highcpudiskcounter > 0) {
+		print RED, "Warning: High CPU utilization detected to perform IO operations, above the threshold of $config_file->{highcpudiskwarning} for $highcpudiskcounter times\n", RESET if ($verbose);
+		push (@term_collector, "Excessive CPU for disk operations detected.");
+
+	}
+	if ($swapcounter > 0) {
+		print RED, "Warning: Memory Swapping on the system!\n", RESET if ($verbose);
+		push (@term_collector, "Memory Swapping has been detected which could cause severe performance degradation!");
+
+	}
+	if ($contextcounter > 0) {
+		print RED, "Warning: Context Switiching more than the threshold of $config_file->{contextswitchwarning} for $contextcounter times\n", RESET if ($verbose);
+		push (@term_collector, "High Context Switching detected.");
+
+	}
 
 }
 
@@ -726,3 +790,14 @@ sub uniq {
   return grep { !$seen{$_}++ } @_;
 }
 
+sub printing_analysismessages {
+
+	print BLUE, "Debug: Printing findings\n", RESET if ($verbose);
+	print RED, "Warning: Following Sub Optimal Configurations have been detected in the system:\n", RESET;
+	foreach (@term_collector) {
+		print RED "$_\n", RESET;
+	}
+	print RED, "Please contact SA for help! For technical details, execute the script in verbose [-v] more. Thank you.\n", RESET;
+	print GREEN, "Info: End of analysis.\n", RESET;
+
+}
