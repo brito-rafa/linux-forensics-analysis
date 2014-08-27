@@ -31,6 +31,12 @@ As of this run, the file logo-citihpc.png must be present on the same directory.
 revision history
 ================
 ```
+citihpc-analysis.pl
+2014-08-27 - Released to replace both genheatmaps.pl and citihpc-analysis.sh. Graphs are improved and all ethtool metrics are measured.
+Using XML as config file.
+```
+
+```
 genheatmaps.pl
 1.1 - added memory
 1.2 - support for RHEL5
