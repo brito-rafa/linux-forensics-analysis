@@ -11,6 +11,7 @@ use XML::Simple;
 # key variables
 my $verbose = 0;
 my $MYDATADIR; my $STATIC; my $FIRSTDYNAMIC; my $LASTDYNAMIC; my $CONREP; my $ASU;
+my @LISTALLDYNAMIC;
 my $HP = 0; my $IBM = 0;
 my $timestamp;
 my @term_collector;
@@ -24,13 +25,13 @@ my $dateofdata;
 my $simple; my $config_file; my @staticfile; my $lvm = 0;
 my $conrep_simple; my $conrep_config;
 
-my $graphdat; $graphdat = "graph.forensic.dat"; 
-my $graphdatmem; $graphdatmem = "graph.forensic.mem.dat"; 
-my $graphdatnic; $graphdatnic = "graph.forensic.nic.dat"; 
-my $graphdatdiskawait; $graphdatdiskawait = "graph.forensic.disk.await.dat"; 
-my $graphdatdiskcpu; $graphdatdiskcpu = "graph.forensic.disk.cpu.dat"; 
-my $graphdatdiskread; $graphdatdiskread = "graph.forensic.disk.read.dat"; 
-my $graphdatdiskwrite; $graphdatdiskwrite = "graph.forensic.disk.write.dat"; 
+my $graphdat; 
+my $graphdatmem; 
+my $graphdatnic; 
+my $graphdatdiskawait; 
+my $graphdatdiskcpu; 
+my $graphdatdiskread; 
+my $graphdatdiskwrite;
  
 my %actualkernelparam; my %actualasuparam;
 my %first_dynamic; my %last_dynamic;
@@ -57,7 +58,7 @@ sub main {
 		&checking_conrep();
 	}
 	&compare_first_last_dynamic();
-#	&parsing_all_dynamic();
+	&parsing_all_dynamic();
 
 }
 
@@ -104,7 +105,8 @@ sub checking_datadir {
 		print BLUE,"Debug: Data directory is $MYDATADIR\n",RESET if ($verbose);
 	}
 
-	my $compress=`ls ${MYDATADIR}/dynamic*gz | wc -l`; chomp ($compress);
+	@LISTALLDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null`;
+	my $compress = @LISTALLDYNAMIC;
 
 	if ($compress < 2) {
 		print RED, "Error: Dynamic Files cannot be found or are not compressed!\n", RESET;
@@ -556,8 +558,20 @@ sub load_dynamic_data(\%$)  {
 
 
 sub parsing_all_dynamic {
-	my @listfiles;
-	@listfiles = `ls $ARGV[0]/dynamic*gz`;
+
+	$graphdat = "$config_file->{heatmapfilename}$hostnam-cpu.dat"; 
+	$graphdatmem = "$config_file->{heatmapfilename}$hostnam-mem.dat"; 
+	$graphdatnic = "$config_file->{heatmapfilename}$hostnam-nic.dat"; 
+	$graphdatdiskawait = "$config_file->{heatmapfilename}$hostnam-disk.await.dat"; 
+	$graphdatdiskcpu = "$config_file->{heatmapfilename}$hostnam-disk.cpu.dat"; 
+	$graphdatdiskread = "$config_file->{heatmapfilename}$hostnam-disk.read.dat"; 
+	$graphdatdiskwrite = "$config_file->{heatmapfilename}$hostnam-disk.write.dat"; 
+	
+	my $cpucounter = 0;
+	my $diskcounter = 0;
+	my $swapcounter = 0;
+	my $contextcounter = 0;
+ 
 	open (my $fh, '>', $graphdat) or die "Could not open file '$graphdat' $!";
 	open (my $fhmem, '>', $graphdatmem) or die "Could not open file '$graphdatmem' $!";
 	open (my $fhnic, '>', $graphdatnic) or die "Could not open file '$graphdatnic' $!";
@@ -565,7 +579,7 @@ sub parsing_all_dynamic {
 	open (my $fhdiskcpu, '>', $graphdatdiskcpu) or die "Could not open file '$graphdatdiskcpu' $!";
 	open (my $fhdiskread, '>', $graphdatdiskread) or die "Could not open file '$graphdatdiskread' $!";
 	open (my $fhdiskwrite, '>', $graphdatdiskwrite) or die "Could not open file '$graphdatdiskwrite' $!";
-	foreach (@listfiles) {
+	foreach (@LISTALLDYNAMIC) {
 		chomp;
 		open ("logfile", sprintf("zcat %s |", $_)) || die "can't open pipe from command 'zcat  $_' : $!\n";
 		my @datarray; my @datarraymem; my @datarraynic; my @datarraydiska; my @datarraydiskcpu; my @datarraydiskread; my @datarraydiskwrite;
