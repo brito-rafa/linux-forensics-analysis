@@ -8,15 +8,16 @@ It parses data generated from citihpc-forensics-collector creating heatmaps and 
 requirements
 ============
 
-The following perl modules must be installed on any box that have access to the VSH logs :
+The following perl modules must be installed on any box :
 - perl-GD
 - perl-GD-Graph
+- perl-XML-Simple
 
 One can install those modules in Citi network following these steps to enable the non-certified repos:
 https://collaborate.citi.net/groups/sfs-reporting-30/blog/2014/03/13/not-certified-yum-repository-on-citi-cloud-servers
 
 And running
-yum --enablerepo=NOT-CERTIFIED install perl-GD perl-GD-Graph
+yum --enablerepo=NOT-CERTIFIED install perl-GD perl-GD-Graph perl-XML-Simple
 
 runtime
 =======
