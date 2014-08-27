@@ -33,6 +33,7 @@ my $graphdatdiskread; $graphdatdiskread = "graph.forensic.disk.read.dat";
 my $graphdatdiskwrite; $graphdatdiskwrite = "graph.forensic.disk.write.dat"; 
  
 my %actualkernelparam; my %actualasuparam;
+my %first_dynamic; my %last_dynamic;
 
 
 # Finally executing the code
@@ -52,11 +53,11 @@ sub main {
 	# bios checking
 	if ($IBM) {
 		&checking_asu;
-	}
-	if ($HP) {
+	} elsif ($HP) {
 		&checking_conrep();
 	}
-#	&parsing_dynamic();
+	&compare_first_last_dynamic();
+#	&parsing_all_dynamic();
 
 }
 
@@ -464,8 +465,97 @@ sub checking_conrep {
 
 }
 
+sub compare_first_last_dynamic {
 
-sub parsing_dynamic {
+	my $key; my $nic; my $nicmetric; my $diff;
+	%first_dynamic = load_dynamic_data($FIRSTDYNAMIC);
+	#print Dumper (\%first_dynamic);
+	%last_dynamic = load_dynamic_data($LASTDYNAMIC);
+	#print Dumper (\%last_dynamic);
+	#
+	foreach $key (sort (keys(%last_dynamic))) {
+
+		if ($key eq "interface") {
+			foreach $nic (sort (keys(%{$last_dynamic{interface}}))) {
+				foreach $nicmetric (sort (keys(%{$last_dynamic{interface}{$nic}}))) {
+					$diff = $last_dynamic{interface}{$nic}{$nicmetric} - $first_dynamic{interface}{$nic}{$nicmetric};
+					if ($diff > 0) {
+						print RED, "Warning: $nic parameter $nicmetric detected with a difference of $diff\n", RESET if ($verbose);
+						push (@term_collector, "NIC $nic metrics which may indicate network degradation!\n");
+					}
+				}
+			} 
+			next;
+		}
+
+		# netstat parameters
+		#
+		$diff = $last_dynamic{$key} - $first_dynamic{$key};
+		if ($diff > 0) {
+			print RED, "Warning: $key parameter detected with a difference of $diff\n", RESET if ($verbose);
+			push (@term_collector, "$key has been detected which may indicate network degradation!\n");
+		}
+
+	}	
+}
+
+sub load_dynamic_data(\%$)  {
+
+	my %dynamic_data;
+	#%dynamic_data = %{$_[0]};
+	#my $file = $_[1];
+	my $file = $_[0];
+        my @fileline = `zcat $file`;
+	my $nicifconfig; $nicifconfig = "dummy"; 
+	my $nicethtool;
+	$nicethtool = "dummy";
+        foreach (@fileline) {
+		$dynamic_data{"TCP Segments Retransmited"} = $1 if (/\s+(\d+)\s+segments\sretransmited\n/);	
+		$dynamic_data{"UDP Buffer Overflows"} = $1 if (/\s+(\d+)\s+packet\sreceive\serrors\n/);	
+		$dynamic_data{"TCP data loss"} = $1 if (/\s+(\d+)\s+TCP\sdata\sloss\sevents\n/);	
+		$dynamic_data{"Socket Buffer Overruns"} = $1 if (/\s+(\d+)\s+packets\spruned\sfrom\sreceive\squeue\sbecause\sof\ssocket\sbuffer\soverrun\n/);
+		$dynamic_data{"TCP timeouts"} = $1 if (/\s+(\d+)\s+other\sTCP\stimeouts\n/);
+		$dynamic_data{"Connections Aborted Due to Timeout"} = $1 if (/\s+(\d+)\s+connections\saborted\sdue\s\to\stimeout\n/);
+
+		if (/^(eth\d|bond\d)\s+Link\sencap:Ethernet/) {
+			$nicifconfig = $1;
+			next;
+		}
+		if (/\s+(RX|TX)\s+packets:\d+\s+errors:(\d+)\s+dropped:(\d+)\s+overruns:(\d+)\s+(frame|carrier):(\d+)/) {
+			$dynamic_data{interface}{$nicifconfig}{"$1 errors"} = $2;
+			$dynamic_data{interface}{$nicifconfig}{"$1 dropped"} = $3;
+			$dynamic_data{interface}{$nicifconfig}{"$1 overruns"} = $4;
+			$dynamic_data{interface}{$nicifconfig}{"$1 $5"} = $6;
+		}
+		if (/^(eth\d)\s-\sNIC\sStatistics/) {
+			$nicethtool = $1 ;
+			next;
+		}
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_error_bytes):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_mac_errors):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_carrier_errors):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_crc_errors):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_align_errors):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_single_collisions):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_multi_collisions):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_deferred):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_excess_collisions):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_late_collisions):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(tx_total_collisions):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_fragments):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_jabbers):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_undersize_packets):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_oversize_packets):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_ftq_discards):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_discards):\s+(\d+)\n/);
+			$dynamic_data{interface}{$nicethtool}{$1} = $2 if (/\s+(rx_fw_discards):\s+(\d+)\n/);
+	}
+	#print Dumper (\%dynamic_data);
+	return %dynamic_data;
+}
+
+
+sub parsing_all_dynamic {
 	my @listfiles;
 	@listfiles = `ls $ARGV[0]/dynamic*gz`;
 	open (my $fh, '>', $graphdat) or die "Could not open file '$graphdat' $!";
