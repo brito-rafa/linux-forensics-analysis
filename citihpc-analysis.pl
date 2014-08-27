@@ -6,6 +6,11 @@ use warnings;
 use Data::Dumper;
 use Term::ANSIColor qw(:constants);
 use XML::Simple;
+use GD;
+use GD::Graph::Data;
+use GD::Graph::lines;
+use GD::Graph::mixed;
+
 
 
 # key variables
@@ -20,7 +25,9 @@ my $TODAY; my $NOW;
 
 my $hostnam; 
 my $hypert; my $ht;
-my $memtot; my $rhel; my $rhelminor; my $rhelcomplete;  my $numcores; my @activenics; my $total_nics; my %test_nic; my @list_disks; my $total_disks;
+my $memtot; my $rhel; my $rhelminor; my $rhelcomplete;
+my $numcores; my @activenics; my $total_nics; my %test_nic; my @list_disks; my $total_disks;
+my $nicextralegend = "";
 my $dateofdata;
 my $simple; my $config_file; my @staticfile; my $lvm = 0;
 my $conrep_simple; my $conrep_config;
@@ -36,6 +43,12 @@ my $graphdatdiskwrite;
 my %actualkernelparam; my %actualasuparam;
 my %first_dynamic; my %last_dynamic;
 
+my $verticalsize; my $horizontalsize; my $numofdynfiles;
+my $verticalsizedisk;
+
+my $compress; #number of dynamic files
+
+my @mytype; my @mycolors; my @mytypecpu; my @mycpulegend;
 
 # Finally executing the code
 &main();
@@ -59,6 +72,14 @@ sub main {
 	}
 	&compare_first_last_dynamic();
 	&parsing_all_dynamic();
+	&preping_data_graphs ();
+        &creating_line_graph ();
+        &creating_mem_graph ();
+        &creating_nic_graph ();
+        &creating_diskawait_graph ();
+        &creating_diskcpu_graph ();
+        &creating_diskread_graph ();
+        &creating_diskwrite_graph ();
 	&printing_analysismessages();
 
 }
@@ -107,7 +128,7 @@ sub checking_datadir {
 	}
 
 	@LISTALLDYNAMIC=`ls ${MYDATADIR}/dynamic*gz 2>/dev/null`;
-	my $compress = @LISTALLDYNAMIC;
+	$compress = @LISTALLDYNAMIC;
 
 	if ($compress < 2) {
 		print RED, "Error: Dynamic Files cannot be found or are not compressed!\n", RESET;
@@ -757,17 +778,17 @@ sub parsing_all_dynamic {
 	close $fhdiskwrite;
 
 	if ($cpucounter > 0) {
-		print RED, "Warning: CPU idleness less than the threshold of $config_file->{cpuwarning} for $cpucounter times\n", RESET if ($verbose);
+		print RED, "Warning: CPU idleness less than the threshold of $config_file->{cpuwarning} % for $cpucounter times\n", RESET if ($verbose);
 		push (@term_collector, "High CPU Utilization detected.");
 
 	}
 	if ($diskcounter > 0) {
-		print RED, "Warning: Disk latency more than the threshold of $config_file->{disklatencywarning} for $diskcounter times\n", RESET if ($verbose);
+		print RED, "Warning: Disk latency more than the threshold of $config_file->{disklatencywarning} milliseconds for $diskcounter times\n", RESET if ($verbose);
 		push (@term_collector, "Excessive disk latency detected.");
 
 	}
 	if ($highcpudiskcounter > 0) {
-		print RED, "Warning: High CPU utilization detected to perform IO operations, above the threshold of $config_file->{highcpudiskwarning} for $highcpudiskcounter times\n", RESET if ($verbose);
+		print RED, "Warning: High CPU utilization detected to perform IO operations, above the threshold of $config_file->{highcpudiskwarning} % for $highcpudiskcounter times\n", RESET if ($verbose);
 		push (@term_collector, "Excessive CPU for disk operations detected.");
 
 	}
@@ -777,7 +798,7 @@ sub parsing_all_dynamic {
 
 	}
 	if ($contextcounter > 0) {
-		print RED, "Warning: Context Switiching more than the threshold of $config_file->{contextswitchwarning} for $contextcounter times\n", RESET if ($verbose);
+		print RED, "Warning: Context Switching more than the threshold of $config_file->{contextswitchwarning} context switches/sec for $contextcounter times\n", RESET if ($verbose);
 		push (@term_collector, "High Context Switching detected.");
 
 	}
@@ -799,5 +820,523 @@ sub printing_analysismessages {
 	}
 	print RED, "Please contact SA for help! For technical details, execute the script in verbose [-v] more. Thank you.\n", RESET;
 	print GREEN, "Info: End of analysis.\n", RESET;
+
+}
+
+
+sub creating_line_graph {
+
+
+	# finding the number of CPUs from the dat file (from the number of columns minus 2)
+	my $numcpu = `cat $graphdat | awk '{print NF}' | head -1`; chomp ($numcpu);
+	$numcpu = $numcpu - 1;
+
+	my $data = GD::Graph::Data->new();
+	$data->read(file=> $graphdat);
+
+	my $mylinegraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+
+	$mylinegraph->set(
+	      title             => "Total (bar) and Individual (line) CPU %utilization - server $hostnam $hypert - $dateofdata",
+		types		=> [@mytypecpu],
+		dclrs		=> [@mycolors],
+		transparent	=> 0,
+		# top margin
+		t_margin	=> 50,
+		# bottom margin
+		b_margin	=> 5,
+		# space between text and graph, default 8
+		text_space	=> 16,
+	);
+
+	# the following is not working , need to check why
+	#$mylinegraph->set_title_font('arial', 12);
+	$mylinegraph->set_title_font(gdLargeFont);
+
+	$mylinegraph->set( 
+	      x_label           => 'Time',
+	      x_label_skip      => 8, 
+	      x_labels_vertical      => 1, 
+	      y_label           => 'CPU %',
+	      y_max_value       => 100,
+	      y_min_value       => 0,
+	      y_tick_number     => 10,
+	      y_label_skip      => 0,
+		# no border - difficult to read when CPUs are 100% all the timesS
+		box_axis	=> 0,
+	
+	  ) or die $mylinegraph->error;
+
+	$mylinegraph->set_legend_font(gdLargeFont);
+	$mylinegraph->set_legend(@mycpulegend);
+
+	my $linegraph = $mylinegraph->plot($data) or die $mylinegraph->error;
+
+	if ( -f $config_file->{graphlogo} ) {
+		# adding the logo
+		my $logo = GD::Image->newFromPng($config_file->{graphlogo});
+		my ($w, $h) = $logo->getBounds( );
+		$linegraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
+	}
+
+	my $pnglinefile="$config_file->{heatmapfilename}$hostnam-cpu.png";
+	open(IMG, ">$pnglinefile") or die $!;
+	binmode IMG;
+	print IMG $linegraph->png;
+
+}
+
+sub creating_mem_graph {
+
+	my $datamem = GD::Graph::Data->new();
+	$datamem->read(file=> $graphdatmem);
+
+	my $mymemgraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+
+	$mymemgraph->set(
+	      title             => "Memory Utilization - server $hostnam  - $dateofdata",
+		types		=>  [qw(area area area area area)],
+		dclrs		=>  [qw(green red blue gray yellow)],
+		transparent	=> 0,
+		# top margin
+		t_margin	=> 50,
+		# bottom margin
+		b_margin	=> 5,
+		# space between text and graph, default 8
+		text_space	=> 16,
+	);
+
+	# the following is not working , need to check why
+	#$mylinegraph->set_title_font('arial', 12);
+	$mymemgraph->set_title_font(gdLargeFont);
+
+	$mymemgraph->set( 
+	      x_label           => 'Time',
+	      x_label_skip      => 8, 
+	      x_labels_vertical      => 1, 
+	      y_label           => 'GB',
+	      y_max_value       => ($datamem->get_min_max_y_all( ))[1]+2,
+	      y_min_value       => 0,
+	      y_tick_number     => 10,
+	      y_label_skip      => 0,
+		y_number_format   => sub { int(shift); }, 
+	  ) or die $mymemgraph->error;
+
+	$mymemgraph->set_legend_font(gdLargeFont);
+	$mymemgraph->set_legend(qw (FREE USED BUFFERS SHARED SWAP));
+
+	my $memgraph = $mymemgraph->plot($datamem) or die $mymemgraph->error;
+
+	if ( -f $config_file->{graphlogo} ) {
+		# adding the logo
+		my $logo = GD::Image->newFromPng($config_file->{graphlogo});
+		my ($w, $h) = $logo->getBounds( );
+		$memgraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
+	}
+	my $pngmemfile="$config_file->{heatmapfilename}$hostnam-mem.png";
+	open(IMG, ">$pngmemfile") or die $!;
+	binmode IMG;
+	print IMG $memgraph->png;
+}
+
+
+sub creating_nic_graph {
+
+	# setting up pre-defined arrays - up to 60 elements
+	my $datanic = GD::Graph::Data->new();
+	$datanic->read(file=> $graphdatnic);
+
+	my $mynicgraph = GD::Graph::lines->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+
+	my @listofcolors = splice @mycolors, 0 , $total_nics*2;
+	$mynicgraph->set(
+	      title             => "NIC utilization in Kbytes/s - server $hostnam $nicextralegend  - $dateofdata",
+		dclrs		=> [@listofcolors],
+		transparent	=> 0,
+		# top margin
+		t_margin	=> 50,
+		# bottom margin
+		b_margin	=> 5,
+		# space between text and graph, default 8
+		text_space	=> 16,
+	);
+
+	# the following is not working , need to check why
+	#$mylinegraph->set_title_font('arial', 12);
+	$mynicgraph->set_title_font(gdLargeFont);
+
+	$mynicgraph->set( 
+	      x_label           => 'Time',
+	      x_label_skip      => 8, 
+	      x_labels_vertical      => 1, 
+	      y_label           => 'Kbytes/s',
+	      y_max_value       => ($datanic->get_min_max_y_all( ))[1]+2,
+	      y_min_value       => 0,
+	      y_tick_number     => 10,
+	      y_label_skip      => 0, 
+	  ) or die $mynicgraph->error;
+
+	# setting up the legend - need to detect the right NICs to display on legend
+	my @nic_legend;
+	for (@activenics) {
+		my $tempnicuc = uc($_);
+		push (@nic_legend, "$tempnicuc RX");
+		push (@nic_legend, "$tempnicuc TX");
+	}
+	
+	$mynicgraph->set_legend_font(gdLargeFont);
+	$mynicgraph->set_legend(@nic_legend);
+
+	my $nicgraph = $mynicgraph->plot($datanic) or die $mynicgraph->error;
+
+	if ( -f $config_file->{graphlogo} ) {
+		# adding the logo
+		my $logo = GD::Image->newFromPng($config_file->{graphlogo});
+		my ($w, $h) = $logo->getBounds( );
+		$nicgraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
+	}
+
+	my $pngnicfile="$config_file->{heatmapfilename}$hostnam-nic.png";
+	open(IMG, ">$pngnicfile") or die $!;
+	binmode IMG;
+	print IMG $nicgraph->png;
+
+}
+
+sub creating_diskawait_graph {
+
+	my $datadiska = GD::Graph::Data->new();
+	#$datamem->read(file=> $graphdatmem);
+	$datadiska->read(file=> $graphdatdiskawait);
+
+	my $mydiskagraph = GD::Graph::mixed->new($horizontalsize, $verticalsizedisk) or die "Can't create graph!";
+
+	$mydiskagraph->set(
+	      title             => "Disk Latency in milliseconds - server $hostnam  - $dateofdata",
+		types		=>  [@mytype],
+		dclrs		=>  [@mycolors],
+		transparent	=> 0,
+		# top margin
+		t_margin	=> 50,
+		# bottom margin
+		b_margin	=> 5,
+		# space between text and graph, default 8
+		text_space	=> 16,
+	);
+
+	# the following is not working , need to check why
+	#$mylinegraph->set_title_font('arial', 12);
+	$mydiskagraph->set_title_font(gdLargeFont);
+
+	$mydiskagraph->set( 
+	      x_label           => 'Time',
+	      x_label_skip      => 8, 
+	      x_labels_vertical      => 1, 
+	      y_label           => 'milliseconds',
+	      y_max_value       => ($datadiska->get_min_max_y_all( ))[1]+1,
+	      y_min_value       => 0,
+#	      y_tick_number     => ($datadiska->get_min_max_y_all( ))[1]+1,
+	      y_label_skip      => 0,
+		y_number_format   => sub { int(shift); }, 
+	  ) or die $mydiskagraph->error;
+
+        my @disk_legend;
+
+        for (@list_disks) {
+                my $tempdiskuc = uc($_);
+                push (@disk_legend, $tempdiskuc);
+        }
+#        print Dumper(\@disk_legend);
+
+	$mydiskagraph->set_legend_font(gdLargeFont);
+        $mydiskagraph->set_legend(@disk_legend);
+
+	my $diskagraph = $mydiskagraph->plot($datadiska) or die $mydiskagraph->error;
+
+	if ( -f $config_file->{graphlogo} ) {
+		# adding the logo
+		my $logo = GD::Image->newFromPng($config_file->{graphlogo});
+		my ($w, $h) = $logo->getBounds( );
+		$diskagraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
+	}
+
+	my $pngdiskafile="$config_file->{heatmapfilename}$hostnam-disk-latency.png";
+	open(IMG, ">$pngdiskafile") or die $!;
+	binmode IMG;
+	print IMG $diskagraph->png;
+}
+
+sub creating_diskcpu_graph {
+
+	my $datadiskc = GD::Graph::Data->new();
+	$datadiskc->read(file=> $graphdatdiskcpu);
+
+	my $mydiskcgraph = GD::Graph::mixed->new($horizontalsize, $verticalsizedisk) or die "Can't create graph!";
+
+	$mydiskcgraph->set(
+	      title             => "%CPU used for IO Operations - server $hostnam  - $dateofdata",
+		types		=>  [@mytype],
+		dclrs		=>  [@mycolors],
+		transparent	=> 0,
+		# top margin
+		t_margin	=> 50,
+		# bottom margin
+		b_margin	=> 5,
+		# space between text and graph, default 8
+		text_space	=> 16,
+	);
+
+	# the following is not working , need to check why
+	#$mylinegraph->set_title_font('arial', 12);
+	$mydiskcgraph->set_title_font(gdLargeFont);
+
+	$mydiskcgraph->set( 
+	      x_label           => 'Time',
+	      x_label_skip      => 8, 
+	      x_labels_vertical      => 1, 
+	      y_label           => 'CPU%',
+	      y_max_value       => ($datadiskc->get_min_max_y_all( ))[1]+1,
+	      y_min_value       => 0,
+#	      y_tick_number     => ($datadiskc->get_min_max_y_all( ))[1]+1,
+	      y_label_skip      => 0,
+		y_number_format   => sub { int(shift); }, 
+	  ) or die $mydiskcgraph->error;
+
+        my @disk_legend;
+
+        for (@list_disks) {
+                my $tempdiskuc = uc($_);
+                push (@disk_legend, $tempdiskuc);
+        }
+#        print Dumper(\@disk_legend);
+
+	$mydiskcgraph->set_legend_font(gdLargeFont);
+        $mydiskcgraph->set_legend(@disk_legend);
+
+	my $diskcgraph = $mydiskcgraph->plot($datadiskc) or die $mydiskcgraph->error;
+
+	if ( -f $config_file->{graphlogo} ) {
+		# adding the logo
+		my $logo = GD::Image->newFromPng($config_file->{graphlogo});
+		my ($w, $h) = $logo->getBounds( );
+		$diskcgraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
+	}
+
+	my $pngdiskcfile="$config_file->{heatmapfilename}$hostnam-disk-cpu.png";
+	open(IMG, ">$pngdiskcfile") or die $!;
+	binmode IMG;
+	print IMG $diskcgraph->png;
+}
+
+sub creating_diskread_graph {
+
+	my $datadiskr = GD::Graph::Data->new();
+	$datadiskr->read(file=> $graphdatdiskread);
+
+	my $mydiskrgraph = GD::Graph::mixed->new($horizontalsize, $verticalsizedisk) or die "Can't create graph!";
+
+	$mydiskrgraph->set(
+	      title             => "Disk Reads in Mbytes/sec - server $hostnam  - $dateofdata",
+		types		=>  [@mytype],
+		dclrs		=>  [@mycolors],
+		transparent	=> 0,
+		# top margin
+		t_margin	=> 50,
+		# bottom margin
+		b_margin	=> 5,
+		# space between text and graph, default 8
+		text_space	=> 16,
+	);
+
+	# the following is not working , need to check why
+	$mydiskrgraph->set_title_font(gdLargeFont);
+
+	$mydiskrgraph->set( 
+	      x_label           => 'Time',
+	      x_label_skip      => 8, 
+	      x_labels_vertical      => 1, 
+	      y_label           => 'Mbytes/sec',
+	      y_max_value       => ($datadiskr->get_min_max_y_all( ))[1]+1,
+	      y_min_value       => 0,
+#	      y_tick_number     => ($datadiskr->get_min_max_y_all( ))[1]+1,
+	      y_label_skip      => 0,
+		y_number_format   => sub { int(shift); }, 
+	  ) or die $mydiskrgraph->error;
+
+        my @disk_legend;
+
+        for (@list_disks) {
+                my $tempdiskuc = uc($_);
+                push (@disk_legend, $tempdiskuc);
+        }
+#        print Dumper(\@disk_legend);
+
+	$mydiskrgraph->set_legend_font(gdLargeFont);
+        $mydiskrgraph->set_legend(@disk_legend);
+
+	my $diskrgraph = $mydiskrgraph->plot($datadiskr) or die $mydiskrgraph->error;
+
+	if ( -f $config_file->{graphlogo} ) {
+		# adding the logo
+		my $logo = GD::Image->newFromPng($config_file->{graphlogo});
+		my ($w, $h) = $logo->getBounds( );
+		$diskrgraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
+	}
+
+	my $pngdiskrfile="$config_file->{heatmapfilename}$hostnam-disk-read.png";
+	open(IMG, ">$pngdiskrfile") or die $!;
+	binmode IMG;
+	print IMG $diskrgraph->png;
+}
+
+sub creating_diskwrite_graph {
+
+	my $datadiskw = GD::Graph::Data->new();
+	$datadiskw->read(file=> $graphdatdiskwrite);
+
+	my $mydiskwgraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+
+	$mydiskwgraph->set(
+	      title             => "Disk Writes in Mbytes/sec - server $hostnam  - $dateofdata",
+		types		=>  [@mytype],
+		dclrs		=>  [@mycolors],
+		transparent	=> 0,
+		# top margin
+		t_margin	=> 50,
+		# bottom margin
+		b_margin	=> 5,
+		# space between text and graph, default 8
+		text_space	=> 16,
+	);
+
+	# the following is not working , need to check why
+	$mydiskwgraph->set_title_font(gdLargeFont);
+
+	$mydiskwgraph->set( 
+	      x_label           => 'Time',
+	      x_label_skip      => 8, 
+	      x_labels_vertical      => 1, 
+	      y_label           => 'Mbytes/sec',
+	      y_max_value       => ($datadiskw->get_min_max_y_all( ))[1]+1,
+	      y_min_value       => 0,
+#	      y_tick_number     => ($datadiskw->get_min_max_y_all( ))[1]+1,
+	      y_label_skip      => 0,
+		y_number_format   => sub { int(shift); }, 
+	  ) or die $mydiskwgraph->error;
+
+        my @disk_legend;
+
+        for (@list_disks) {
+                my $tempdiskuc = uc($_);
+                push (@disk_legend, $tempdiskuc);
+        }
+#        print Dumper(\@disk_legend);
+
+	$mydiskwgraph->set_legend_font(gdLargeFont);
+        $mydiskwgraph->set_legend(@disk_legend);
+
+	my $diskwgraph = $mydiskwgraph->plot($datadiskw) or die $mydiskwgraph->error;
+
+	if ( -f $config_file->{graphlogo} ) {
+		# adding the logo
+		my $logo = GD::Image->newFromPng($config_file->{graphlogo});
+		my ($w, $h) = $logo->getBounds( );
+		$diskwgraph->copy($logo, $horizontalsize-90, 5, 0, 0, $w, $h);
+	}
+
+	my $pngdiskwfile="$config_file->{heatmapfilename}$hostnam-disk-write.png";
+	open(IMG, ">$pngdiskwfile") or die $!;
+	binmode IMG;
+	print IMG $diskwgraph->png;
+}
+
+sub preping_data_graphs {
+
+        if ($compress < 1100) {
+                $horizontalsize=1200;
+                $verticalsize=600;
+        } else {
+                $horizontalsize=$numofdynfiles+100;
+                $verticalsize=600;
+        }
+
+        # disk requires a talled graph if there is so many of them
+        if ($total_disks < 160) {
+                $verticalsizedisk=600;
+        } else {
+                $verticalsizedisk=1500;
+        }
+
+	my $countertype = 0;
+	while ($countertype < 800) {
+		$mytype[$countertype] = "lines";
+		$countertype++;
+	}
+
+	my $countertypecpu = 0;
+	$mytypecpu[$countertypecpu] = "bars"; my $countertemp;
+	$mycpulegend[$countertypecpu] = "ALL";
+	while ($countertypecpu < 160) {
+		$countertemp = $countertypecpu;
+		$countertypecpu++;
+		$mytypecpu[$countertypecpu] = "lines";
+		$mycpulegend[$countertypecpu] = "CPU$countertemp";
+	}
+
+	my $countercolor = 0;
+	$mycolors[$countercolor] = "marine";
+	while ($countercolor < 900) {
+		$countercolor++;
+		$mycolors[$countercolor] = "red";
+		$countercolor++;
+		$mycolors[$countercolor] = "green";
+		$countercolor++;
+		$mycolors[$countercolor] = "blue";
+		$countercolor++;
+		$mycolors[$countercolor] = "gray";
+		$countercolor++;
+		$mycolors[$countercolor] = "yellow";
+		$countercolor++;
+		$mycolors[$countercolor] = "purple";
+		$countercolor++;
+		$mycolors[$countercolor] = "orange";
+		$countercolor++;
+		$mycolors[$countercolor] = "pink";
+		$countercolor++;
+		$mycolors[$countercolor] = "cyan";
+		$countercolor++;
+		$mycolors[$countercolor] = "dbrown";
+		$countercolor++;
+		$mycolors[$countercolor] = "dred";
+		$countercolor++;
+		$mycolors[$countercolor] = "dblue";
+		$countercolor++;
+		$mycolors[$countercolor] = "dgreen";
+		$countercolor++;
+		$mycolors[$countercolor] = "dgray";
+		$countercolor++;
+		$mycolors[$countercolor] = "dyellow";
+		$countercolor++;
+		$mycolors[$countercolor] = "dpurple";
+		$countercolor++;
+		$mycolors[$countercolor] = "dpink";
+		$countercolor++;
+		$mycolors[$countercolor] = "lred";
+		$countercolor++;
+		$mycolors[$countercolor] = "lblue";
+		$countercolor++;
+		$mycolors[$countercolor] = "lgreen";
+		$countercolor++;
+		$mycolors[$countercolor] = "lgray";
+		$countercolor++;
+		$mycolors[$countercolor] = "lyellow";
+		$countercolor++;
+		$mycolors[$countercolor] = "lpurple";
+		$countercolor++;
+		$mycolors[$countercolor] = "lorange";
+		$countercolor++;
+		$mycolors[$countercolor] = "lbrown";
+		$countercolor++;
+	}
 
 }

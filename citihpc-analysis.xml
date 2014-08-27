@@ -13,6 +13,7 @@
 	<!-- HT should be ... -->
 	<hyperthread>off</hyperthread>
 	<heatmapfilename>citihpc-forensics-heatmap-</heatmapfilename>
+	<graphlogo>logo-citihpc.png</graphlogo>
 	<ibmbios>
 		<parameter name="IMM.ThermalModePolicy">
 			<value>Performance</value>
