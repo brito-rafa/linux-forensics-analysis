@@ -1256,7 +1256,7 @@ sub preping_data_graphs {
                 $horizontalsize=1200;
                 $verticalsize=600;
         } else {
-                $horizontalsize=$numofdynfiles+100;
+                $horizontalsize=$compress+100;
                 $verticalsize=600;
         }
 
