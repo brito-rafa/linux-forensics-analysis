@@ -26,12 +26,18 @@ As of v2.0 citihpc-analysis.pl is the integrated script.
 
 Usage: ./citihpc-analysis.pl <citihpc-forensic-collector-data-directory> [-v]
 
+config
+======
+
+File citihpc-analysis.xml is required to exist on the same directory as the script. As of release 2.0, the default config files is tuned for low latency setting. In future, we will provide other templates for other applications such as grid.
+
+The names of the parameters inside of XML are intended to the self-explanatory.
 
 revision history
 ================
 ```
 citihpc-analysis.pl
-2014-08-27 - Released to replace both genheatmaps.pl and citihpc-analysis.sh. Graphs are improved and all ethtool metrics are measured.
+2014-08-27 - v2.0 Released to replace both genheatmaps.pl and citihpc-analysis.sh. Graphs are improved and all ethtool metrics are measured.
 Using XML as config file.
 ```
 
