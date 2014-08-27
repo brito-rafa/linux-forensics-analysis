@@ -22,11 +22,10 @@ yum --enablerepo=NOT-CERTIFIED install perl-GD perl-GD-Graph perl-XML-Simple
 runtime
 =======
 
-citihpc-analysis.sh is the main script but one can generate the heatmaps separately running 
+As of v2.0 citihpc-analysis.pl is the integrated script. 
 
-./genheatmaps.pl <collector_directory>
+Usage: ./citihpc-analysis.pl <citihpc-forensic-collector-data-directory> [-v]
 
-As of this run, the file logo-citihpc.png must be present on the same directory.
 
 revision history
 ================
@@ -37,7 +36,7 @@ Using XML as config file.
 ```
 
 ```
-genheatmaps.pl
+genheatmaps.pl - deprecated
 1.1 - added memory
 1.2 - support for RHEL5
 1.3 - 2014/07/16 - changed CPU graph for utilization
@@ -52,7 +51,7 @@ genheatmaps.pl
 ```
 
 ```
-citihpc-analysis.sh
+citihpc-analysis.sh - deprecated
 Created 5/12/2014
 1.0 - Check for  Logical Volume, Hyper-threading, Dmidecode, Memory Device
 1.1 - LSPCI, SYSCTL Kernel Parameters, tcp_rmem, Ring Buffers
