@@ -146,10 +146,10 @@ sub loading_static_data {
 		# hardware 
 
 		if (/^\s+Size:\s(\d+)\sMB/) {
-			$static_data{hardware}{memorysizes}{$1} = 1;
+			$static_data{hardware}{memorysizes} = $1;
 			$static_data{hardware}{totalmemory} = $static_data{hardware}{totalmemory} + $1;
 		}
-		$static_data{hardware}{memoryspeeds}{$1} = 1 if (/^\s+Speed:\s(\d+)\sMHz/);
+		$static_data{hardware}{memoryspeeds} = $1 if (/^\s+Speed:\s(\d+)\sMHz/);
 
 		# getting the machine type/model
 		$flag_system_info = 1 if (/^System\sInformation/);
@@ -205,12 +205,12 @@ sub loading_static_data {
 		$maximum = 1 if (/^Pre-set\smaximums:/);
 		$maximum = 0 if (/^Current\shardware\ssettings:/);
 		if ($maximum) {
-			$static_data{network}{nic}{$nicring}{ringbuffers}{rxmax} = $1 if (/^RX:\s+(\d+)\n/);
-			$static_data{network}{nic}{$nicring}{ringbuffers}{txmax} = $1 if (/^TX:\s+(\d+)\n/);
+			$static_data{network}{nic}{$nicring}{ringbuffersrxmax} = $1 if (/^RX:\s+(\d+)\n/);
+			$static_data{network}{nic}{$nicring}{ringbufferstxmax} = $1 if (/^TX:\s+(\d+)\n/);
 
 		} else {
-			$static_data{network}{nic}{$nicring}{ringbuffers}{rxcurrent} = $1 if (/^RX:\s+(\d+)\n/);
-			$static_data{network}{nic}{$nicring}{ringbuffers}{txcurrent} = $1 if (/^TX:\s+(\d+)\n/);
+			$static_data{network}{nic}{$nicring}{ringbuffersrxcurrent} = $1 if (/^RX:\s+(\d+)\n/);
+			$static_data{network}{nic}{$nicring}{ringbufferstxcurrent} = $1 if (/^TX:\s+(\d+)\n/);
 
 		}
 
@@ -220,15 +220,15 @@ sub loading_static_data {
 		if (/^(IMM|SYSTEM_PROD_DATA|BootOrder|iSCSI|PXE|uEFI\.)(.*)=(.*)\n/) {
 			# sometimes the kernel value can be multiple numbers or words
 			$asuparam = "$1"."$2";
-			$static_data{bios}{parameter}{$asuparam} = $3;
+			$static_data{bios}{$asuparam} = $3;
 
 		}
 
 		# finding logical volume and disks
-		$static_data{env}{lvm} = 1 if (/Logical\s[vV]olume/);	
-		$static_data{env}{disk}{$1}{size} = $2 if (/^Disk\s(.*):\s(\d+\.\d+)\s[MG]B.*/);
+		$static_data{misc}{lvm} = 1 if (/Logical\s[vV]olume/);	
+		$static_data{misc}{disk}{$1}{size} = $2 if (/^Disk\s(.*):\s(\d+\.\d+)\s[MG]B.*/);
 
-		$static_data{env}{nameserver}{$1} = 1 if (/nameserver\s(\d+\.\d+\.\d+\.\d+)/);	
+		$static_data{misc}{nameserver}{$1} = 1 if (/nameserver\s(\d+\.\d+\.\d+\.\d+)/);	
 		
 		$static_data{misc}{tcpsegmentationoff} = 1 if (/^tcp-segmentation-offload:\s+off/);
 		$static_data{misc}{genericsegmentationoff} = 1 if (/^generic-segmentation-offload:\s+off/);
@@ -292,6 +292,17 @@ sub compare_hashes(\%\%) {
 				$diff{$key1}{complete}{$base} = $hbase{$key1}{complete};
 				$diff{$key1}{complete}{$comp} = $hcomp{$key1}{complete};
 				next;
+			}
+
+		}
+
+		if ($key1 eq "hardware") {
+			foreach $key2 (sort (keys(%{$hbase{$key1}}))) {
+				if ($hbase{$key1}{$key2} ne $hcomp{$key1}{$key2}) {
+					$diff{$key1}{$key2}{$base} = $hbase{$key1}{$key2};
+					$diff{$key1}{$key2}{$comp} = $hcomp{$key1}{$key2};
+				}
+
 			}
 
 		}
