@@ -42,6 +42,11 @@ Using XML as config file.
 ```
 
 ```
+serverdiff.pl
+2014-09-02 - Added package comparison with version
+```
+
+```
 genheatmaps.pl - deprecated
 1.1 - added memory
 1.2 - support for RHEL5

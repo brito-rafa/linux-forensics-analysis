@@ -139,8 +139,9 @@ sub loading_static_data {
 			if (/^Info:\send\sof\srpm\s\-qa/) { 
 				$flag_rpm = 0;
 				next;
+			} else {
+				$static_data{os}{packages}{$1} = $3 if (/(\w+(-\w+)?)-(\d+\.\d+.*)/);
 			}
-			$static_data{os}{packages}{$1} = 1 if (/(.*)/);
 		}
 		
 		# hardware 
@@ -149,7 +150,7 @@ sub loading_static_data {
 			$static_data{hardware}{memorysizes} = $1;
 			$static_data{hardware}{totalmemory} = $static_data{hardware}{totalmemory} + $1;
 		}
-		$static_data{hardware}{memoryspeeds} = $1 if (/^\s+Speed:\s(\d+)\sMHz/);
+		$static_data{hardware}{memoryspeeds} = $1 if (/^\s+Speed:\s(\d+\sMHz)/);
 
 		# getting the machine type/model
 		$flag_system_info = 1 if (/^System\sInformation/);
@@ -282,6 +283,7 @@ sub compare_hashes(\%\%) {
 					compare_packages(\%{$hbase{$key1}{packages}}, \%{$hcomp{$key1}{packages}}, $base, $comp) ;
 					# compare packages
 				} else {
+					print RED, "Info: Minor OS releases different, skipping packages comparison.\n", RESET;
 					$diff{$key1}{complete}{$base} = $hbase{$key1}{complete};
 					$diff{$key1}{complete}{$comp} = $hcomp{$key1}{complete};
 					next;
@@ -289,6 +291,7 @@ sub compare_hashes(\%\%) {
 				}	
 
 			} else {
+				print RED, "Info: Major OS releases different, skipping kernel parameters and packages comparison.\n", RESET;
 				$diff{$key1}{complete}{$base} = $hbase{$key1}{complete};
 				$diff{$key1}{complete}{$comp} = $hcomp{$key1}{complete};
 				next;
@@ -298,12 +301,22 @@ sub compare_hashes(\%\%) {
 
 		if ($key1 eq "hardware") {
 			foreach $key2 (sort (keys(%{$hbase{$key1}}))) {
-				if ($hbase{$key1}{$key2} ne $hcomp{$key1}{$key2}) {
-					$diff{$key1}{$key2}{$base} = $hbase{$key1}{$key2};
-					$diff{$key1}{$key2}{$comp} = $hcomp{$key1}{$key2};
+				if ( ! exists  $hcomp{$key1}{$key2} ) {
+						$diff{$key1}{$key2}{$base} = $hbase{$key1}{$key2};
+						$diff{$key1}{$key2}{$comp} = undef;
+				} else {
+					if ($hbase{$key1}{$key2} ne $hcomp{$key1}{$key2}) {
+						$diff{$key1}{$key2}{$base} = $hbase{$key1}{$key2};
+						$diff{$key1}{$key2}{$comp} = $hcomp{$key1}{$key2};
+					}
 				}
-
 			}
+
+		}
+
+
+		if ($key1 eq "network") {
+
 
 		}
 #		if (ref $hbase{$key1} eq 'HASH') {
@@ -376,8 +389,20 @@ sub compare_packages {
 	foreach $key (sort (keys %packagesbase)) {
 	#	print BLUE, "Debug: checking $key ... \n", RESET if ($verbose);
 		if (! exists $packagescomp{$key}) {
-			$diff{os}{packages}{$key}{$base} = "present";
 			$diff{os}{packages}{$key}{$comp} = "notpresent";
+			$diff{os}{packages}{$key}{$base} = $packagesbase{$key};
+		} else {
+				if ($packagesbase{$key} ne $packagescomp{$key}) {
+					$diff{os}{packages}{$key}{$base} = $packagesbase{$key};
+					$diff{os}{packages}{$key}{$comp} = $packagescomp{$key};
+				}
+
+		}
+	}
+	foreach $key (sort (keys %packagescomp)) {
+		if (! exists $packagesbase{$key}) {
+			$diff{os}{packages}{$key}{$base} = "notpresent";
+			$diff{os}{packages}{$key}{$comp} = $packagescomp{$key};
 		}
 	}
 }
