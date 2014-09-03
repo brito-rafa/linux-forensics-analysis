@@ -47,8 +47,10 @@ sub main {
 
 	%first_static = loading_static_data($FIRSTSTATICFILE);
 #	print Dumper (\%first_static);
+#	print Dumper (\%{$first_static{network}});
 	%last_static = loading_static_data($LASTSTATICFILE);
 #	print Dumper (\%last_static);
+#	print Dumper (\%{$last_static{network}});
 
 	compare_hashes(\%first_static, \%last_static);
 	print Dumper (\%diff);
@@ -100,7 +102,7 @@ sub loading_static_data {
 	print BLUE, "Debug: Starting to parse and load static data from $file \n", RESET if ($verbose);
 	
 	my @tempkernelvalue; my $counter; my $kernelparam; my $asuparam;
-	my $nicring; my $flag_rpm = 0 ; my $flag_system_info = 0; my $flag_network_driver = 0; my $nicdriver = 0;
+	my $nicring; my $flag_rpm = 0 ; my $flag_system_info = 0; my $flag_network_driver = 0; my $nicdriver = 0; my $tempdriver;
 	my $maximum = 0; my $key;
 
 	my @staticfileline;
@@ -176,27 +178,31 @@ sub loading_static_data {
 		# network
 
 		# detecting active NICs - from ip addr command 
-		$static_data{network}{nic}{$1}{activenic} = 1 if (/^\s+inet.*global\s(eth\d)/);
+#		$static_data{network}{$1}{activenic} = 1 if (/^\s+inet.*global\s(eth\d)/);
 		$static_data{network}{nic}{$1}{mtu} = $2 if (/.*(eth\d):.*BROADCAST.*mtu\s(\d+)\sqdisc/); 
 
 		#bond stuff
 		if (/.*(eth\d):.*SLAVE.*mtu\s(\d+).*\smaster\s(bond\d)/) {
-			 $static_data{network}{nic}{$1}{activenic} = 1;
-			 $static_data{network}{nic}{$1}{slave} = $3;
+#			 $static_data{network}{$1}{activenic} = 1;
+#			 $static_data{network}{$1}{slaveof} = $3;
 			 $static_data{network}{nic}{$1}{mtu} = $2;
-			 $static_data{network}{bondnic}{$3}{slave}{$1} = 1;
+			 $static_data{network}{nic}{$3}{driver} = "bondinterface";
 
 		}
 		# just double chcking bond info
-		$static_data{network}{bondnic}{$1}{activenic} = 1 if (/\s+inet.*global\s(bond\d)/);
+		$static_data{network}{nic}{$1}{activenic} = 1 if (/\s+inet.*global\s(bond\d)/);
 
 		# nic drivers
 		$flag_network_driver = 1 if (/^Info: ethtool\s\-i/);
 		if ($flag_network_driver) {
 			$nicdriver = $1 if (/(eth\d)/);
-			$static_data{network}{nic}{$nicdriver}{driver} = $1 if (/driver:\s+(.*)/);
-			$static_data{network}{nic}{$nicdriver}{version} = $1 if (/^version:\s+(.*)/);
-			$static_data{network}{nic}{$nicdriver}{firmware} = $1 if (/firmware-version:\s+(.*)/);
+			if (/driver:\s+(.*)/) {
+				$tempdriver = $1;
+				$static_data{network}{nic}{$nicdriver}{driver} = $tempdriver;
+				$static_data{network}{driver}{$tempdriver}{driver} = $tempdriver;
+			}
+			$static_data{network}{driver}{$tempdriver}{version} = $1 if (/^version:\s+(.*)/);
+			$static_data{network}{driver}{$tempdriver}{firmware} = $1 if (/firmware-version:\s+(.*)/);
 		}
 		$flag_network_driver = 0 if (/^Info: end of ethtool\s\-i/);
 
@@ -229,11 +235,11 @@ sub loading_static_data {
 		$static_data{misc}{lvm} = 1 if (/Logical\s[vV]olume/);	
 		$static_data{misc}{disk}{$1}{size} = $2 if (/^Disk\s(.*):\s(\d+\.\d+)\s[MG]B.*/);
 
-		$static_data{misc}{nameserver}{$1} = 1 if (/nameserver\s(\d+\.\d+\.\d+\.\d+)/);	
 		
 		$static_data{misc}{tcpsegmentationoff} = 1 if (/^tcp-segmentation-offload:\s+off/);
 		$static_data{misc}{genericsegmentationoff} = 1 if (/^generic-segmentation-offload:\s+off/);
 
+		$static_data{miscarray}{nameserver}{$1} = 1 if (/nameserver\s(\d+\.\d+\.\d+\.\d+)/);	
 
 	}
 
@@ -260,9 +266,6 @@ sub compare_hashes(\%\%) {
 	my $nic; my $bondnic;
 	my $base; $base = $hbase{hostname};
 	my $comp; $comp = $hcomp{hostname};
-
-	$diff{hostname}{$base} = $base;
-	$diff{hostname}{$comp} = $comp;
 
 	foreach $key1 (sort (keys(%hbase))) {
 
@@ -316,7 +319,34 @@ sub compare_hashes(\%\%) {
 
 
 		if ($key1 eq "network") {
+			foreach $key2 (sort (keys(%{$hbase{network}{driver}}))) {
+				next unless exists $hbase{network}{driver}{$key2}{driver};
+				if ( ! exists  $hcomp{network}{driver}{$key2} ) {
+						$diff{$key1}{driver}{$key2}{$base} = $hbase{$key1}{driver}{$key2}{driver};
+						$diff{$key1}{driver}{$key2}{$comp} = "notpresent";
+				} else {
+					if ($hbase{$key1}{driver}{$key2}{driver} eq $hcomp{$key1}{driver}{$key2}{driver}) {
+						# will compare only if the nics are the same...
+						foreach $key3 (sort (keys %{$hbase{network}{driver}{$key2}})) {
+							if ($hbase{$key1}{driver}{$key2}{$key3} ne $hcomp{$key1}{driver}{$key2}{$key3}) {
+								$diff{$key1}{driver}{$key2}{$key3}{$base} = $hbase{$key1}{driver}{$key2}{$key3};
+								$diff{$key1}{driver}{$key2}{$key3}{$comp} = $hcomp{$key1}{driver}{$key2}{$key3};
+							}
+						}
+						# compare NIC
+					} else {
+						$diff{$key1}{driver}{$key2}{$base} = $hbase{$key1}{driver}{$key2}{driver};
+						$diff{$key1}{driver}{$key2}{$comp} = $hcomp{$key1}{driver}{$key2}{driver};
+					}
+				}
+			}
+			foreach $key2 (sort (keys(%{$hcomp{network}{driver}}))) {
+				if (! exists $hbase{network}{driver}{$key2}{driver}) {
+					$diff{$key1}{driver}{$key2}{$base} = "notpresent";
+					$diff{$key1}{driver}{$key2}{$comp} = $hcomp{$key1}{driver}{$key2}{driver};
 
+				}
+			}
 
 		}
 #		if (ref $hbase{$key1} eq 'HASH') {
