@@ -44,6 +44,7 @@ Using XML as config file.
 ```
 serverdiff.pl
 2014-09-02 - Added package comparison with version
+2014-09-04 - Added network driver comparison and ignoring most of ipv6+random kernel parameters
 ```
 
 ```

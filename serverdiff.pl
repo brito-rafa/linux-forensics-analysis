@@ -394,6 +394,10 @@ sub compare_kernel {
 		next if ($key =~ /eth\d/);
 		next if ($key =~ /bond\d/);
 		next if ($key =~ /hostname/);
+		next if ($key =~ /random/);
+		next if ($key =~ /net\.ipv6\.conf/);
+		next if ($key =~ /net\.ipv6\.neigh/);
+		next if ($key =~ /net\.ipv6\.route/);
 		if (exists $kernelcomp{$key}) {
 			# check if the paramer is multi value
 			$arraysize = @{$kernelbase{$key}};
