@@ -211,7 +211,12 @@ sub parsing_static {
 		$numcores = ($1+1) if (/^processor\s+:\s(\d+)/); 
 
 		# detecting active NICs - from ip addr command - filling a temp array
-		push (@tempactivenics, $1) if (/^\s+inet.*global\s(eth\d|bond\d)/);
+		#push (@tempactivenics, $1) if (/^\s+inet.*global\s(eth\d(\.\d+)?|bond\d)/);
+
+		$test_nic{$1} = 1 if (/^\s+inet.*global\s(eth\d)(\.\d+)?/);
+
+		# bond
+		$test_nic{$1} = 1 if (/.*(eth\d)(\.\d+)?(\@\w+\d+)?:.*SLAVE.*mtu\s(\d+).*\smaster\s(bond\d)/);
 
 		# finding out if hyperthreading is on, cpu cores and simblings must match
 		$tempcpucores = $1 if (/^cpu\scores\s+:\s+(\d+)/);
@@ -324,23 +329,6 @@ sub parsing_static {
 	}
 	
 
-	# parsing the activenics
-#	print Dumper (\@tempactivenics);
-	for (@tempactivenics) {
-		chomp;
-		if (/bond/) {
-			# i need to make an extra step - need to improve this code big time, doing another grep
-			my $nicextralegend = "(bonded NICs)";
-			my @bondedinterfaces = `grep master $STATIC | grep $_ | awk '{print \$2}' | awk -F: '{print \$1}'`;
-			for (@bondedinterfaces) {
-				chomp;
-				$test_nic{$_} = 1;
-			}
-
-		} else {
-			$test_nic{$_} = 1;
-		}
-	}
 	@activenics = keys (%test_nic); 
 	$total_nics = @activenics;
 	#print Dumper(\@activenics);
