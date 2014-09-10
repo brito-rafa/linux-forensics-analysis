@@ -1182,7 +1182,7 @@ sub creating_diskwrite_graph {
 	my $datadiskw = GD::Graph::Data->new();
 	$datadiskw->read(file=> $graphdatdiskwrite);
 
-	my $mydiskwgraph = GD::Graph::mixed->new($horizontalsize, $verticalsize) or die "Can't create graph!";
+	my $mydiskwgraph = GD::Graph::mixed->new($horizontalsize, $verticalsizedisk) or die "Can't create graph!";
 
 	$mydiskwgraph->set(
 	      title             => "Disk Writes in Mbytes/sec - server $hostnam  - $dateofdata",
