@@ -372,7 +372,7 @@ sub parsing_static {
 #	#detecting the list of disks - they must be have "*vg-*" on it - this data is only on dynamic
 	my @temp_list_disks = `zcat $LASTDYNAMIC`; my %temp_disk;
 	for (@temp_list_disks) {
-		if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+)\s+\d+\.*/){
+		if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+|cciss\/\w+)\s+\d+\.*/){
 			$temp_disk{$1} = 1;
 		}
 	}
@@ -702,7 +702,7 @@ sub parsing_all_dynamic {
 
 
 			# disk data
-			if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/){
+			if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+|cciss\/\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/){
 				#$counter{$1}++;
 				#next if ($counter{$1}%2==1);
 				# $1 is the disk (it must have "vg" on it
