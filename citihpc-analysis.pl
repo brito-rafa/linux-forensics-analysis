@@ -702,7 +702,7 @@ sub parsing_all_dynamic {
 
 
 			# disk data
-			if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+|cciss\/\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/){
+			if (/^Average:\s+(\w+vg-\w+|dev\d+-\d+|cciss\/\w+|sticore-\w+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)/){
 				#$counter{$1}++;
 				#next if ($counter{$1}%2==1);
 				# $1 is the disk (it must have "vg" on it
