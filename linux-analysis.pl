@@ -85,7 +85,7 @@ sub main {
 }
 
 sub usage {
-	print RED, "Usage: $0 <citihpc-forensic-collector-data-directory> [-v]\nSpecifiy the path of the citihpc forensic collector data directory.\n", RESET;
+	print RED, "Usage: $0 <linux-forensic-collector-data-directory> [-v]\nSpecifiy the path of the citihpc forensic collector data directory.\n", RESET;
 	exit;
 }
 
@@ -96,7 +96,7 @@ sub display_header {
 
 	my $user=`id | awk 'BEGIN { FS="("} { print \$2}' | awk 'BEGIN { FS=")"} {print \$1}'`; chomp($user);
 
-	print GREEN, "Info: Starting Citi HPC Low Latency Analysis on $TODAY at $NOW\n", RESET;
+	print GREEN, "Info: Starting Linux Low Latency Analysis on $TODAY at $NOW\n", RESET;
 	print GREEN, "Info: User $user is executing the script.\n", RESET;
 
 }
