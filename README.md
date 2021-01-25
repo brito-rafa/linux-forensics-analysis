@@ -1,9 +1,9 @@
-citihpc-forensics-analysis
+linux-forensics-analysis
 ==========================
-citihpc-forensics-analysis is part of the CitiHPC Forensics framework and methodology.
-It parses data generated from citihpc-forensics-collector creating heatmaps and a report about issues and point of improvments.
+linux-forensics-analysis is part of the Linux Forensics framework and methodology.
+It parses data generated from linux-forensics-collector creating heatmaps and a report about issues and point of improvments.
 
-
+It might need some tweaking to make it run with the new log file name.
 
 requirements
 ============
@@ -12,12 +12,6 @@ The following perl modules must be installed on any box :
 - perl-GD
 - perl-GD-Graph
 - perl-XML-Simple
-
-One can install those modules in Citi network following these steps to enable the non-certified repos:
-https://collaborate.citi.net/groups/sfs-reporting-30/blog/2014/03/13/not-certified-yum-repository-on-citi-cloud-servers
-
-And running
-yum --enablerepo=NOT-CERTIFIED install perl-GD perl-GD-Graph perl-XML-Simple
 
 runtime
 =======
@@ -32,7 +26,7 @@ As of v2.1 serverdiff.pl is part of the suite of tools. Serverdiff is used to co
 config
 ======
 
-File citihpc-analysis.xml is required to exist on the same directory as the script. As of release 2.0, the default config files is tuned for low latency setting. In future, we will provide other templates for other applications such as grid.
+File linux-analysis.xml is required to exist on the same directory as the script. As of release 2.0, the default config files is tuned for low latency setting. In future, we will provide other templates for other applications such as grid.
 
 The names of the parameters inside of XML are intended to the self-explanatory.
 
