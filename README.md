@@ -16,9 +16,9 @@ The following perl modules must be installed on any box :
 runtime
 =======
 
-As of v2.0 citihpc-analysis.pl is the integrated script. 
+As of v2.0 linux-analysis.pl is the integrated script. 
 
-Usage: ./citihpc-analysis.pl <citihpc-forensic-collector-data-directory> [-v]
+Usage: ./linux-analysis.pl <linux-forensic-collector-data-directory> [-v]
 
 
 As of v2.1 serverdiff.pl is part of the suite of tools. Serverdiff is used to compare two servers taking two static files as parameters.
@@ -38,8 +38,8 @@ Legacy korn shell and config files removed as of version 2.2
 revision history
 ================
 ```
-citihpc-analysis.pl
-2014-08-27 - v2.0 Released to replace both genheatmaps.pl and citihpc-analysis.sh. Graphs are improved and all ethtool metrics are measured.
+linux-analysis.pl
+2014-08-27 - v2.0 Released to replace both genheatmaps.pl and linux-analysis.sh. Graphs are improved and all ethtool metrics are measured.
 Using XML as config file.
 ```
 
