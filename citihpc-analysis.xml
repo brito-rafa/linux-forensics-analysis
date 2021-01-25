@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<!--citihpc-analysis.xml version="1.0" timestamp="2014-08-21 00:00:00"-->
-<!-- created by Rafael Brito rb36135 CitiHPC -->
+<!--linux-analysis.xml version="1.0" timestamp="2014-08-21 00:00:00"-->
+<!-- created by Rafael Brito -->
 <forensics-config>
 	<!-- The threshold of context switches per second that tool will display a warning -->
 	<contextswitchwarning>5000</contextswitchwarning>
@@ -12,8 +12,8 @@
 	<highcpudiskwarning>80</highcpudiskwarning>
 	<!-- HT should be ... -->
 	<hyperthread>off</hyperthread>
-	<heatmapfilename>citihpc-forensics-heatmap-</heatmapfilename>
-	<graphlogo>logo-citihpc.png</graphlogo>
+	<heatmapfilename>linux-forensics-heatmap-</heatmapfilename>
+	<graphlogo>logo-linux.png</graphlogo>
 	<ibmbios>
 		<parameter name="IMM.ThermalModePolicy">
 			<value>Performance</value>
